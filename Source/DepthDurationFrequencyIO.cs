@@ -1,6 +1,4 @@
-﻿using ColossalFramework;
-using ICities;
-using System.IO;
+﻿using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -23,6 +21,7 @@ namespace Rainfall
         private float[] stormReturnPeriods = { 1f, 2f, 5f, 10f, 25f, 50f, 100f };
         private float[] stormDurations = { 30f, 60f, 120f, 180f, 360f, 720f, 1440f };
         private List<string> cityNames;
+        private List<string> defaultCityNames;
         private Dictionary<string, float[,]> defaultDDFAtlas;
         private Dictionary<string, string> cityIntensityCurve;
         private Dictionary<string, string> defaultCityIntensityCurve;
@@ -34,9 +33,10 @@ namespace Rainfall
             fileDirectory = @"C:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\";
             filePath = fileDirectory + "RFDepthDurationFrequency.csv";
             fileName = "RFDepthDurationFrequency.csv";
+            initializeDefaultDDFAtlas();
             if (!File.Exists(fileName))
             {
-                initializeDefaultDDFAtlas();
+                
                 try
                 {
                     string deliminator = ",";
@@ -77,6 +77,9 @@ namespace Rainfall
                 catch (IOException ex)
                 {
                     Debug.Log("[RF].DepthDurationFrequency Could not write DDF matrix file encountered excpetion " + ex.ToString());
+                    /*cityIntensityCurve = defaultCityIntensityCurve;
+                    DDFAtlas = defaultDDFAtlas;
+                    cityNames = defaultCityNames;*/
                 }
 
             }
@@ -165,14 +168,23 @@ namespace Rainfall
             catch (FileNotFoundException)
             {
                 Debug.Log("[RF].DepthDurationFrequency file not found at " + fileDirectory + fileName);
+                cityIntensityCurve = defaultCityIntensityCurve;
+                DDFAtlas = defaultDDFAtlas;
+                cityNames = defaultCityNames;
             }
             catch (DirectoryNotFoundException)
             {
                 Debug.Log("[RF].DepthDurationFrequency Directory not found at " + fileDirectory);
+                cityIntensityCurve = defaultCityIntensityCurve;
+                DDFAtlas = defaultDDFAtlas;
+                cityNames = defaultCityNames;
             }
             catch (IOException ex)
             {
                 Debug.Log("[RF].DepthDurationFrequency Could not read Depth Duration Frequency file encountered excpetion " + ex.ToString());
+                cityIntensityCurve = defaultCityIntensityCurve;
+                DDFAtlas = defaultDDFAtlas;
+                cityNames = defaultCityNames;
             }
         }
         private void initializeDefaultDDFAtlas()
@@ -203,6 +215,16 @@ namespace Rainfall
                 {"Los Angeles. California. USA","Type I - Pacific Southwest/AK/HI"},
                 {"Orlando. Florida. USA","Type III - East & Gulf Coasts" },
                 {"Houston. Texas. USA","Type III - East & Gulf Coasts" }
+            };
+            defaultCityNames = new List<string>
+            {
+                "Boise. Idaho. USA",
+                "Las Vegas. Nevada. USA" ,
+                "Seattle. Washington. USA",
+                "San Francisco. California. USA",
+                "Los Angeles. California. USA",
+                "Orlando. Florida. USA",
+                "Houston. Texas. USA"
             };
         }
         public static string[] GetCityNames()

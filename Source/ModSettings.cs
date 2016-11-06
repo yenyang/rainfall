@@ -187,7 +187,8 @@ namespace Rainfall
 
             }
         }
-        public const string DefaultStormDistributionName = "Default (Unmodded) Simulation";
+        public const string UnmoddedStormDistributionName = "Unmodded Simulation (Not Recommended)";
+        public const string DefaultStormDistributionName = "Type II - Noncoastal US";
         private static string _stormDistributionName;
         public static string StormDistributionName
         {
@@ -209,8 +210,8 @@ namespace Rainfall
                 }
             }
         }
-
-        public const string DefaultCityName = "Default (Unmodded) Simulation";
+        public const string UnmoddedCityName = "Unmodded Simulation (Not Recommended)";
+        public const string DefaultCityName = "Boise. Idaho. USA";
         private static string _cityName;
         public static string CityName
         {
@@ -369,12 +370,13 @@ namespace Rainfall
             {"OtherPlayerBuildingAI", 0.5f }, {"LowDensityResidentialBuildingAI", 0.35f }, {"LowDensityCommercialBuildingAI", 0.5f },
             {"HighDensityResidentialBuildingAI", 0.6f }, {"HighDensityCommercialBuildingAI", 0.7f }, {"FarmingIndustrialBuildingAI", 0.2f },
             {"ForestryIndustrialBuildingAI", 0.2f }, {"OreIndustrialBuildingAI", 0.85f }, {"OilIndustryBuildingAI", 0.9f }, {"GenericIndustryBuildingAI", 0.8f },
-            {"OtherPrivateBuildingAI", 0.5f }
+            {"NaturalDrainageAI", 0.2f }, {"OtherPrivateBuildingAI", 0.5f }
         };
 
         public static Dictionary<string, runoffStruct> PublicBuildingsRunoffCoefficients = new Dictionary<string, runoffStruct>() {
             { "CemetaryAI", new runoffStruct( "Cemetaries" , PlayerPrefs.GetFloat("RF_CemetaryAI", DefaultRunoffCoefficients["CemetaryAI"])) },
             { "ParkAI", new runoffStruct( "Parks" , PlayerPrefs.GetFloat("RF_ParkAI", DefaultRunoffCoefficients["ParkAI"])) },
+            { "NaturalDrainageAI", new runoffStruct("Natural Drainage Assets", PlayerPrefs.GetFloat("RF_NaturalDrainageAI", DefaultRunoffCoefficients["NaturalDrainageAI"])) },
             { "LandfillSiteAI", new runoffStruct("Landfills", PlayerPrefs.GetFloat("RF_LandfillSiteAI", DefaultRunoffCoefficients["LandfillSiteAI"])) },
             {  "FirestationAI", new runoffStruct( "Fire Stations",  PlayerPrefs.GetFloat("RF_FirestationAI", DefaultRunoffCoefficients["FirestationAI"])) },
             {  "PoliceStationAI", new runoffStruct( "Police Stations",  PlayerPrefs.GetFloat("RF_PoliceStationAI", DefaultRunoffCoefficients["PoliceStationAI"])) },
@@ -420,6 +422,351 @@ namespace Rainfall
             return false;
         }
 
+
+        private static bool _districtControl;
+        private static int? _districtControlInt;
+        public static bool DistrictControl
+        {
+            get
+            {
+                if (_districtControlInt == null)
+                {
+                    _districtControlInt = PlayerPrefs.GetInt("RF_DistrictControl", 1);
+                }
+                if (_districtControlInt == 1)
+                {
+                    _districtControl = true;
+                }
+                else
+                {
+                    _districtControl = false;
+                }
+                return _districtControl;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _districtControlInt = 1;
+                }
+                else
+                {
+                    _districtControlInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_DistrictControl", (int)_districtControlInt);
+
+
+            }
+        }
+
+        private static int? _buildingFloodingTolerance;
+        public const int _defaultBuildingFloodingTolerance = 50;
+        public const int _minFloodTolerance = 0;
+        public const int _maxFloodTolerance = 200;
+        public const int _floodToleranceStep = 10;
+
+        public static int BuildingFloodingTolerance
+        {
+            get
+            {
+                if (!_buildingFloodingTolerance.HasValue)
+                {
+                    _buildingFloodingTolerance = PlayerPrefs.GetInt("RF_BuildingFloodingTolerance", (int)_defaultBuildingFloodingTolerance);
+                }
+                return _buildingFloodingTolerance.Value;
+            }
+            set
+            {
+                if (value >= _buildingFloodedTolerance || value < _minFloodTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _buildingFloodingTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_BuildingFloodingTolerance", value);
+                _buildingFloodingTolerance = value;
+            }
+        }
+
+        private static int? _buildingFloodedTolerance;
+        public const int _defaultBuildingFloodedTolerance = 100;
+
+        public static int BuildingFloodedTolerance
+        {
+            get
+            {
+                if (!_buildingFloodedTolerance.HasValue)
+                {
+                    _buildingFloodedTolerance = PlayerPrefs.GetInt("RF_BuildingFloodedTolerance", (int)_defaultBuildingFloodedTolerance);
+                }
+                return _buildingFloodedTolerance.Value;
+            }
+            set
+            {
+                if (value > _maxFloodTolerance || value <= _buildingFloodingTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _buildingFloodedTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_BuildingFloodedTolerance", value);
+                _buildingFloodedTolerance = value;
+            }
+        }
+
+        private static int? _roadwayFloodingTolerance;
+        public const int _defaultRoadwayFloodingTolerance = 50;
+
+        public static int RoadwayFloodingTolerance
+        {
+            get
+            {
+                if (!_roadwayFloodingTolerance.HasValue)
+                {
+                    _roadwayFloodingTolerance = PlayerPrefs.GetInt("RF_RoadwayFloodingTolerance", (int)_defaultRoadwayFloodingTolerance);
+                }
+                return _roadwayFloodingTolerance.Value;
+            }
+            set
+            {
+                if (value >= _roadwayFloodedTolerance || value < _minFloodTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _roadwayFloodingTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_RoadwayFloodingTolerance", value);
+                _roadwayFloodingTolerance = value;
+            }
+        }
+
+        private static int? _roadwayFloodedTolerance;
+        public const int _defaultRoadwayFloodedTolerance = 100;
+
+        public static int RoadwayFloodedTolerance
+        {
+            get
+            {
+                if (!_roadwayFloodedTolerance.HasValue)
+                {
+                    _roadwayFloodedTolerance = PlayerPrefs.GetInt("RF_RoadwayFloodedTolerance", (int)_defaultRoadwayFloodedTolerance);
+                }
+                return _roadwayFloodedTolerance.Value;
+            }
+            set
+            {
+                if (value > _maxFloodTolerance || value <= _roadwayFloodingTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _roadwayFloodedTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_RoadwayFloodedTolerance", value);
+                _roadwayFloodedTolerance = value;
+            }
+        }
+
+        private static bool _freezeLandvalues;
+        private static int? _freezeLandvaluesInt;
+        public static bool FreezeLandvalues
+        {
+            get
+            {
+                if (_freezeLandvaluesInt == null)
+                {
+                    _freezeLandvaluesInt = PlayerPrefs.GetInt("RF_FreezeLandvalues", 1);
+                }
+                if (_freezeLandvaluesInt == 1)
+                {
+                    _freezeLandvalues = true;
+                }
+                else
+                {
+                    _freezeLandvalues = false;
+                }
+                return _freezeLandvalues;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _freezeLandvaluesInt = 1;
+                }
+                else
+                {
+                    _freezeLandvaluesInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_FreezeLandvalues", (int)_freezeLandvaluesInt);
+
+
+            }
+        }
+        
+        private static int? _gravityDrainageOption;
+        public const int _ImprovedGravityDrainageOption = 2;
+        public const int _SimpleGravityDrainageOption = 1;
+        public const int _IgnoreGravityDrainageOption = 0;
+        private const int _defaultGravityDrainageOption = _ImprovedGravityDrainageOption;
+        
+        public static int GravityDrainageOption 
+        {
+            get
+            {
+                if (_gravityDrainageOption == null)
+                {
+                    _gravityDrainageOption = PlayerPrefs.GetInt("RF_GravityDrainageOption", _defaultGravityDrainageOption);
+                }
+                return (int)_gravityDrainageOption;
+            }
+            set
+            {
+                PlayerPrefs.SetInt("RF_GravityDrainageOption", value);
+                _previousStormOption = value;
+            }
+        }
+
+        /*
+        private static bool _easyMode;
+        private static int? _easyModeInt;
+        public static bool EasyMode
+        {
+            get
+            {
+                if (_easyModeInt == null)
+                {
+                    _easyModeInt = PlayerPrefs.GetInt("RF_EasyMode", 0);
+                }
+                if (_easyModeInt == 1)
+                {
+                    _easyMode = true;
+                }
+                else
+                {
+                    _easyMode = false;
+                }
+                return _easyMode;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _easyModeInt = 1;
+                }
+                else
+                {
+                    _easyModeInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_EasyMode", (int)_easyModeInt);
+
+
+            }
+        }
+        */
+        private static bool _simulatePollution;
+        private static int? _simulatePollutionInt;
+        public static bool SimulatePollution
+        {
+            get
+            {
+                if (_simulatePollutionInt == null)
+                {
+                    _simulatePollutionInt = PlayerPrefs.GetInt("RF_SimulatePollution", 1);
+                }
+                if (_simulatePollutionInt == 1)
+                {
+                    _simulatePollution = true;
+                }
+                else
+                {
+                    _simulatePollution = false;
+                }
+                return _simulatePollution;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _simulatePollutionInt = 1;
+                }
+                else
+                {
+                    _simulatePollutionInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_SimulatePollution", (int)_simulatePollutionInt);
+
+
+            }
+        }
+        private static bool _improvedInletMechanics;
+        private static int? _improvedInletMechanicsInt;
+        public static bool ImprovedInletMechanics
+        {
+            get
+            {
+                if (_improvedInletMechanicsInt == null)
+                {
+                    _improvedInletMechanicsInt = PlayerPrefs.GetInt("RF_SimulatePollution", 1);
+                }
+                if (_improvedInletMechanicsInt == 1)
+                {
+                    _improvedInletMechanics = true;
+                }
+                else
+                {
+                    _improvedInletMechanics = false;
+                }
+                return _improvedInletMechanics;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _improvedInletMechanicsInt = 1;
+                }
+                else
+                {
+                    _improvedInletMechanicsInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_ImprovedInletMechanics", (int)_improvedInletMechanicsInt);
+
+
+            }
+        }
+        private static bool _preventRainBeforeMilestone;
+        private static int? _preventRainBeforeMilestoneInt;
+        public static bool PreventRainBeforeMilestone
+        {
+            get
+            {
+                if (_preventRainBeforeMilestoneInt == null)
+                {
+                    _preventRainBeforeMilestoneInt = PlayerPrefs.GetInt("RF_SimulatePollution", 1);
+                }
+                if (_preventRainBeforeMilestoneInt == 1)
+                {
+                    _preventRainBeforeMilestone = true;
+                }
+                else
+                {
+                    _preventRainBeforeMilestone = false;
+                }
+                return _preventRainBeforeMilestone;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _preventRainBeforeMilestoneInt = 1;
+                }
+                else
+                {
+                    _preventRainBeforeMilestoneInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_PreventRainBeforeMilestone", (int)_preventRainBeforeMilestoneInt);
+
+
+            }
+        }
         public static void resetModSettings()
         {
             ModSettings.Difficulty = 100;
@@ -434,8 +781,18 @@ namespace Rainfall
             ModSettings.MinimumStormDuration = (int)ModSettings._minStormDuration;
             ModSettings.MaximumStormDuration = (int)ModSettings._maxStormDuration;
             ModSettings.MaximumStormIntensity = (int)ModSettings._maxStormIntensity;
-            
-            foreach(KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
+            ModSettings.DistrictControl = true;
+            ModSettings.BuildingFloodedTolerance = _defaultBuildingFloodedTolerance;
+            ModSettings.BuildingFloodingTolerance = _defaultBuildingFloodingTolerance;
+            ModSettings.RoadwayFloodedTolerance = _defaultRoadwayFloodedTolerance;
+            ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
+            ModSettings.FreezeLandvalues = true;
+            //ModSettings.EasyMode = false;
+            ModSettings.SimulatePollution = true;
+            ModSettings.PreventRainBeforeMilestone = true;
+            ModSettings.GravityDrainageOption = _defaultGravityDrainageOption;
+            ModSettings.ImprovedInletMechanics = true;
+            foreach (KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
             {
                 setRunoffCoefficient(pair.Key, DefaultRunoffCoefficients[pair.Key]);
             }

@@ -12,33 +12,34 @@ namespace Rainfall
     public class StormDrainAI : PlayerBuildingAI
     {
         [CustomizableProperty("Uneducated Workers", "Workers", 0)]
-        public int m_workPlaceCount0 = 10;
+        public int m_workPlaceCount0 = 0;
 
         [CustomizableProperty("Educated Workers", "Workers", 1)]
-        public int m_workPlaceCount1 = 10;
+        public int m_workPlaceCount1 = 0;
 
         [CustomizableProperty("Well Educated Workers", "Workers", 2)]
-        public int m_workPlaceCount2 = 10;
+        public int m_workPlaceCount2 = 0;
 
         [CustomizableProperty("Highly Educated Workers", "Workers", 3)]
-        public int m_workPlaceCount3 = 10;
+        public int m_workPlaceCount3 = 0;
 
         [CustomizableProperty("Storm Water Intake", "Water")]
-        public int m_stormWaterIntake = 1000;
+        public int m_stormWaterIntake = 0;
 
         [CustomizableProperty("Storm Water Outlet", "Water")]
-        public int m_stormWaterOutlet = 1000;
+        public int m_stormWaterOutlet = 0;
 
         [CustomizableProperty("Storm Water Detention", "Water")]
-        public int m_stormWaterDetention = 1000;
+        public int m_stormWaterDetention = 0;
 
         [CustomizableProperty("Storm Water Infiltration", "Water")]
-        public int m_stormWaterInfiltration = 1000;
+        public int m_stormWaterInfiltration = 0;
 
+        [CustomizableProperty("Water Location Offset", "Water")]
         public Vector3 m_waterLocationOffset = Vector3.zero;
 
         [CustomizableProperty("Max Water Placement Distance", "Water")]
-        public float m_maxWaterDistance = 100f;
+        public float m_maxWaterDistance = 1000000f;
 
         [CustomizableProperty("Water Effect Distance", "Water")]
         public float m_waterEffectDistance = 100f;
@@ -47,10 +48,28 @@ namespace Rainfall
         public int m_outletPollution = 100;
 
         [CustomizableProperty("Noise Accumulation", "Pollution")]
-        public int m_noiseAccumulation = 50;
+        public int m_noiseAccumulation = 0;
 
         [CustomizableProperty("Noise Radius", "Pollution")]
-        public float m_noiseRadius = 100f;
+        public float m_noiseRadius = 0f;
+
+        [CustomizableProperty("Invert", "Water")]
+        public float m_invert = 10f;
+
+        [CustomizableProperty("Soffit", "Water")]
+        public float m_soffit = 10f;
+
+        [CustomizableProperty("Filtration", "Water")]
+        public bool m_filter = false;
+
+        [CustomizableProperty("Milestone", "Water")]
+        public int m_milestone = 0;
+        
+        [CustomizableProperty("Placement Mode", "Water")]
+        public BuildingInfo.PlacementMode m_placementMode = BuildingInfo.PlacementMode.OnTerrain;
+
+        [CustomizableProperty("Placement Mode Alt", "Water")]
+        public BuildingInfo.PlacementMode m_placementModeAlt = BuildingInfo.PlacementMode.Shoreline;
 
         public override void GetNaturalResourceRadius(ushort buildingID, ref Building data, out NaturalResourceManager.Resource resource1, out Vector3 position1, out float radius1, out NaturalResourceManager.Resource resource2, out Vector3 position2, out float radius2)
         {
@@ -82,6 +101,7 @@ namespace Rainfall
         {
             if (infoMode == InfoManager.InfoMode.Water)
             {
+                
                 if ((data.m_flags & Building.Flags.Active) == Building.Flags.None)
                 {
                     return Singleton<InfoManager>.instance.m_properties.m_modeProperties[(int)infoMode].m_inactiveColor;
@@ -97,6 +117,11 @@ namespace Rainfall
                 if (this.m_stormWaterDetention != 0)
                 {
                     return Color.green;
+                }
+
+                if (this.m_filter != false)
+                {
+                    return Color.yellow;
                 }
                 return base.GetColor(buildingID, ref data, infoMode);
             }
@@ -208,6 +233,15 @@ namespace Rainfall
 
         public override ToolBase.ToolErrors CheckBuildPosition(ushort relocateID, ref Vector3 position, ref float angle, float waterHeight, float elevation, ref Segment3 connectionSegment, out int productionRate, out int constructionCost)
         {
+            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
+            {
+                if (this.m_info.m_placementMode != this.m_placementModeAlt)
+                {
+                    this.m_info.m_placementMode = this.m_placementModeAlt;
+                }
+            } else if (this.m_info.m_placementMode != this.m_placementMode) {
+                this.m_info.m_placementMode = this.m_placementMode;
+            }
             if (this.m_stormWaterDetention != 0 || this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0 || this.m_stormWaterOutlet > 0)
             {
                 bool flag;
@@ -246,6 +280,8 @@ namespace Rainfall
         {
             bool flag = false;
             int districtInletCapacity;
+            TerrainManager terrainManager = Singleton<TerrainManager>.instance;
+            WaterSimulation waterSimulation = terrainManager.WaterSimulation;
             if (buildingData.m_netNode != 0)
             {
                 NetManager instance = Singleton<NetManager>.instance;
@@ -273,7 +309,7 @@ namespace Rainfall
 
                 //Debug.Log("[RF].StormDrainAI  Num3 = " + num3.ToString());
 
-                int districtOutletCapacity = Hydraulics.getDistrictOutletCapacity(district);
+                int districtOutletCapacity = Hydraulics.getDistrictVariableCapacity(district, Hydraulics.getOutletList());
                 int districtDetentionCapacity = Hydraulics.getDistrictDetentionCapacity(district);
                 int usedDetentionCapacity = Hydraulics.getDistrictDetainedStormwater(district);
                 if (districtOutletCapacity == 0 && districtDetentionCapacity == 0)
@@ -290,6 +326,8 @@ namespace Rainfall
                     buildingData.m_flags &= ~Building.Flags.Outgoing;
                     buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
                 }
+                
+               
                 if (productionRate > 0)
                 {
                     if (Hydraulics.checkGravityFlowForInlet(buildingID) == false)
@@ -307,6 +345,7 @@ namespace Rainfall
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.NoPlaceforGoods);
                     }
                 }
+               
                 int outletCapacity = Hydraulics.getOutletCapacityForInlet(buildingID);
                 int stormWaterAccumulation = Hydraulics.getStormwaterAccumulation(buildingID);
                 int systemCapacity = outletCapacity + districtDetentionCapacity - stormWaterAccumulation - usedDetentionCapacity;
@@ -327,13 +366,25 @@ namespace Rainfall
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
                     }
                 }
+                float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(buildingData.m_position));
+                int miny;
+                int avgy;
+                int maxy;
+                Singleton<TerrainManager>.instance.CalculateAreaHeight(buildingData.m_position.x, buildingData.m_position.z, buildingData.m_position.x, buildingData.m_position.z, out miny, out avgy, out maxy);
+                if (waterSurfaceElevation*64 < miny && /* Hydraulics.getStormwaterAccumulation(buildingID) == 0 &&*/ ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption && this.m_electricityConsumption == 0 /* && Hydraulics.getHydraulicRate(buildingID) == 0*/ && ModSettings.ImprovedInletMechanics == true)
+                {
+                    productionRate = 0;
+                    
+                    //Debug.Log("[RF].SDai There is no water on top of the inlet. Production Rate = 0.");
+                }
                 int capturedWater;
                 bool flag1 = (buildingData.m_problems & Notification.Problem.NoPlaceforGoods) == Notification.Problem.None;
                 bool flag2 = (buildingData.m_problems & Notification.Problem.LineNotConnected) == Notification.Problem.None;
                 bool flag3 = (buildingData.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
                 bool flag4 = (buildingData.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                bool flag6 = (buildingData.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
                 bool flag5 = productionRate > 0;
-                if (flag1 && flag2 && flag3 && flag4 && flag5)
+                if (flag1 && flag2 && flag3 && flag4 && flag5 && flag6)
                 {
                     capturedWater = this.HandleWaterSource(buildingID, ref buildingData, false, stormWaterIntake, systemCapacity, this.m_waterEffectDistance);
                     if (this.m_electricityConsumption == 0)
@@ -344,7 +395,12 @@ namespace Rainfall
                 }
                 else
                 {
-                    capturedWater = this.HandleWaterSource(buildingID, ref buildingData, false, 0, 0, this.m_waterEffectDistance); ;
+                    capturedWater = 0;
+                    if (buildingData.m_waterSource != 0)
+                    {
+                        waterSimulation.ReleaseWaterSource(buildingData.m_waterSource);
+                        buildingData.m_waterSource = 0;
+                    }
                 }
                 //Debug.Log("[RF].StormDrainAI  Num4 = " + num4.ToString());
 
@@ -362,6 +418,7 @@ namespace Rainfall
                     if (num6 > 0)
                     {
                         Hydraulics.addStormwaterAccumulation(buildingID, num6);
+                        Hydraulics.setHydraulicRate(buildingID, num6);
                         if (num6 == systemCapacity)
                         {
                             //Debug.Log("[RF].StormDrainAI Flooded Inlet " + buildingID);
@@ -388,24 +445,27 @@ namespace Rainfall
                      
                     }
                 }
-
+                if (productionRate == 0)
+                {
+                    Hydraulics.setHydraulicRate(buildingID, 0);
+                }
             }
+
+            //Debug.Log("[RF].StormDrainAI  production rate = " + productionRate.ToString());
+
+
+            //Debug.Log("[RF].StormDrainAI  StormwaterAccumulation = " + Hydraulics.getStormwaterAccumulation(buildingID).ToString() +" at building " + buildingID.ToString());
+            // Debug.Log("[RF].StormDrainAI  TotalStormwaterAccumulation = " + calculateTotalStormDrainAccumulation().ToString());
+            // Debug.Log("[RF].StormDrainAI  StormDrainCapacity = " + calculateStormDrainCapacity().ToString());
+
+
             
-                //Debug.Log("[RF].StormDrainAI  production rate = " + productionRate.ToString());
-
-
-                //Debug.Log("[RF].StormDrainAI  StormwaterAccumulation = " + Hydraulics.getStormwaterAccumulation(buildingID).ToString() +" at building " + buildingID.ToString());
-                // Debug.Log("[RF].StormDrainAI  TotalStormwaterAccumulation = " + calculateTotalStormDrainAccumulation().ToString());
-                // Debug.Log("[RF].StormDrainAI  StormDrainCapacity = " + calculateStormDrainCapacity().ToString());
-
-            
-
-            int num7 = this.m_stormWaterOutlet * productionRate / 100;
-            // Debug.Log("[RF].StormDrainAI  Num7 = " + num7.ToString());
-            if (num7 != 0)
+            int stormWaterOutlet = this.m_stormWaterOutlet * productionRate / 100;
+            // Debug.Log("[RF].StormDrainAI  Num7 = " + stormWaterOutlet.ToString());
+            if (stormWaterOutlet != 0)
             {
                 int currentStormWaterAccumulation = Hydraulics.getStormWaterAccumulationForOutlet(buildingID);
-                int districtDetentionCapacity = Hydraulics.getDistrictDetentionCapacity(district) * productionRate / 100;
+                int districtDetentionCapacity = Hydraulics.getDistrictDetentionCapacity(district);
                 int districtDetainedStormwater = Hydraulics.getDistrictDetainedStormwater(district);
                 districtInletCapacity = Hydraulics.getDistrictInletCapacity(district);
                 if (districtInletCapacity == 0)
@@ -422,20 +482,48 @@ namespace Rainfall
                     buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
                 }
                 // Debug.Log("[RF].StormDrainAI  Total StormwaterAccumulation = " + currentStormWaterAccumulation.ToString());
-                if (this.m_waterLocationOffset.z == 0)
+                /*if (this.m_waterLocationOffset.z == 0 && buildingData.Width <= 1)
                 {
                     this.m_waterLocationOffset.z = 38;
-                }
-                if (currentStormWaterAccumulation > 0 && districtDetainedStormwater >= districtDetentionCapacity * 0.8 || currentStormWaterAccumulation > 0 && districtDetentionCapacity == 0)
+                }*/
+                float SDwaterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(buildingData.m_position + this.m_waterLocationOffset));
+                float SDfloodingDifferential = this.m_invert;
+                float SDfloodedDifferential = this.m_soffit;
+                int[] SDfloodingRateModifiers = new int[7]{ 95, 90, 75, 50, 33, 25, 20};
+                if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
                 {
-                    int num10 = Mathf.Min(currentStormWaterAccumulation, Hydraulics.getDistrictOutletCapacity(district));
+                    productionRate = 20;
+                    buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                }
+                else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                {
+                    if ((int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) >= 0 && (int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) < 7)
+                    {
+                        productionRate = SDfloodingRateModifiers[(int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential)];
+                        //Debug.Log("[RF].StormDrainAI ProduceGoods-Outlet SDfloodingRateModifier is " + productionRate.ToString());
+                    }
+                    else {
+                        productionRate = 50;
+                        Debug.Log("[RF].StormDrainAI ProduceGoods-Outlet SDfloodingRateModifier array out of index error");
+                    }
+                    buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.Flood);
+                } else
+                {
+                    buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.Flood);
+                    buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                }
+                stormWaterOutlet = this.m_stormWaterOutlet * productionRate / 100;
+                
+                if (currentStormWaterAccumulation > 0 && districtDetainedStormwater >= districtDetentionCapacity * 0.8  && productionRate > 0|| currentStormWaterAccumulation > 0 && districtDetentionCapacity == 0 && productionRate > 0)
+                {
+                    int num10 = Mathf.Min(currentStormWaterAccumulation, Hydraulics.getDistrictVariableCapacity(district, Hydraulics.getOutletList()));
 
 
                     if (num10 > 0)
                     {
                         int num12;
 
-                        num12 = this.HandleWaterSource(buildingID, ref buildingData, true, num7, num10, this.m_waterEffectDistance);
+                        num12 = this.HandleWaterSource(buildingID, ref buildingData, true, stormWaterOutlet, num10, this.m_waterEffectDistance);
                         //Debug.Log("[RF].StormDrainAI  Num12 = " + num12.ToString());
                         if (num12 > 0)
                         {
@@ -447,7 +535,7 @@ namespace Rainfall
                             {
                                dumpedQuantity = Hydraulics.removeDistrictStormwaterAccumulation(district, num12, buildingID, false);
                             }
-                            if (dumpedQuantity >= num7)
+                            if (dumpedQuantity >= stormWaterOutlet)
                             {
 
                                 if ((buildingData.m_flags & Building.Flags.CapacityFull) != Building.Flags.CapacityFull)
@@ -471,6 +559,7 @@ namespace Rainfall
                                     buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
                                 }
                             }
+                            Hydraulics.setHydraulicRate(buildingID, dumpedQuantity);
                             //Debug.Log("[RF].StormDrainAI  dumpedQuantity = " + dumpedQuantity.ToString());
                         }
 
@@ -496,11 +585,19 @@ namespace Rainfall
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
                     }
                 }
-
-
+             
                 //Debug.Log("[RF].StormDrainAI  production rate = " + productionRate.ToString());
 
             }
+            if (stormWaterOutlet > 0)
+            {
+                Hydraulics.setVariableCapacity(buildingID, stormWaterOutlet);
+            }
+            else if (this.m_stormWaterOutlet > 0)
+            {
+                Hydraulics.setHydraulicRate(buildingID, 0);
+            }
+          
             int detentionCapacity = this.m_stormWaterDetention * productionRate / 100;
             //Debug.Log("[RF].StormdrainAI detention capacity =" + detentionCapacity.ToString());
             if (detentionCapacity != 0)
@@ -521,7 +618,8 @@ namespace Rainfall
                     buildingData.m_flags &= ~Building.Flags.Incoming;
                     buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
                 }
-                int detainedQuantitity = Mathf.Min(Hydraulics.removeDistrictStormwaterAccumulation(district, remainingCapacity, buildingID, false), remainingCapacity);
+                int detainedQuantitity = Mathf.Min(Hydraulics.removeDistrictStormwaterAccumulation(district, remainingCapacity, buildingID, true), remainingCapacity);
+                Hydraulics.setHydraulicRate(buildingID, detainedQuantitity);
                 //Debug.Log("[RF].StormdrainAI detained quantitiy =" + detainedQuantitity.ToString());
                 Hydraulics.addDetainedStormwater(buildingID, detainedQuantitity);
                 //Debug.Log("[RF].StormdrainAI total detained stormwater =" + totalDetainedStormwater.ToString());
@@ -552,17 +650,25 @@ namespace Rainfall
                         productionRate = 0;
                     }
                 }
-
+                if (productionRate == 0)
+                {
+                    Hydraulics.setHydraulicRate(buildingID, 0);
+                }
 
             }
+            
             base.HandleDead(buildingID, ref buildingData, ref behaviour, totalWorkerCount);
+            
             int num14 = productionRate * this.m_noiseAccumulation / 100;
             if (num14 != 0)
             {
                 Singleton<ImmaterialResourceManager>.instance.AddResource(ImmaterialResourceManager.Resource.NoisePollution, num14, buildingData.m_position, this.m_noiseRadius);
             }
+            
             base.ProduceGoods(buildingID, ref buildingData, ref frameData, productionRate, ref behaviour, aliveWorkerCount, totalWorkerCount, workPlaceCount, aliveVisitorCount, totalVisitorCount, visitPlaceCount);
+            
         }
+
 
         protected override bool CanSufferFromFlood()
         {
@@ -745,6 +851,7 @@ namespace Rainfall
                     drainPipeMissingGuide.Deactivate();
                 }
             }
+           
         }
 
         public override void UpdateGuide(GuideController guideController)
@@ -829,76 +936,148 @@ namespace Rainfall
         public override string GetLocalizedStats(ushort buildingID, ref Building data)
         {
             StringBuilder sb = new StringBuilder();
+            string organization;
+            string area;
+            if (ModSettings.DistrictControl == true)
+            {
+                organization = "District";
+                area = "in district";
+            } else
+            {
+                organization = "Total";
+                area = "on map";
+            }
+            string elevationControl;
+            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+            {
+                elevationControl = "Invert";
+            }
+            else
+            {
+                elevationControl = "Outlet";
+            }
+            string floatFormat = "F1";
             if (this.m_stormWaterIntake > 0)
             {
                 int InletStormwaterAccululation = (int)Hydraulics.getStormwaterAccumulation(buildingID);
                 int DistrictInletCapacity = (int)Hydraulics.getDistrictInletCapacity(buildingID);
                 int DistrictStormwaterAccumulation = (int)Hydraulics.getDistrictStormwaterAccumulation(buildingID);
-                int inletHeight = (int)data.m_position.y;
+                int miny;
+                int avgy;
+                int maxy;
+                Singleton<TerrainManager>.instance.CalculateAreaHeight(data.m_position.x, data.m_position.z, data.m_position.x, data.m_position.z, out miny, out avgy, out maxy);
+
+                float inletHeight = (float)miny/64f;
+                int InletHydraulicRate = (int)Hydraulics.getHydraulicRate(buildingID);
+                int DistrictHydraulicRate = (int)Hydraulics.getDistrictHydraulicRate(buildingID, Hydraulics.getInletList());
+                float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position));
+
                 if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
                 {
-                    sb.AppendLine("No outlet in distrct!");
-                    sb.AppendLine("No detention basin in distrct!");
+                    sb.AppendLine("No outlet " + area + "!");
+                    sb.AppendLine("No detention basin  " + area + "!");
                 }
                 else if ((data.m_problems & Notification.Problem.NoPlaceforGoods) != Notification.Problem.None)
                 {
-                    sb.AppendLine("Cannot gravity drain to outlet!");
-                    sb.AppendLine("Inlet Elevation: " + inletHeight);
+                    
+                    ushort lowestOutletID = Hydraulics.getLowestOutletForInlet(buildingID);
+                    Building currentOutlet = BuildingManager.instance.m_buildings.m_buffer[lowestOutletID];
+                    StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
+                    if (currentOutletAI != null)
+                    {
+                        if (currentOutletAI.m_stormWaterOutlet > 0)
+                        {
+                            float currentOutletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
+                            float outletHeight = currentOutlet.m_position.y;
+                            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                                outletHeight += currentOutletAI.m_invert;
+                            sb.AppendLine("Cannot gravity drain to outlet!");
+                            sb.AppendLine("Outlet ELEV | " + elevationControl + "/Water " + outletHeight.ToString(floatFormat) + "/" + currentOutletWSE.ToString(floatFormat));
+                        } else if (currentOutletAI.m_stormWaterDetention > 0) {
+                            float basinWSE = Hydraulics.getDetentionBasinWSE(lowestOutletID);
+                            float basinInvert = currentOutlet.m_position.y - currentOutletAI.m_invert;
+                            sb.AppendLine("Cannot gravity drain to basin!");
+                            sb.AppendLine("Basin ELEV | Invert/Water " + basinInvert.ToString(floatFormat)+"/"+basinWSE.ToString(floatFormat));
+                        } else
+                        {
+                            sb.AppendLine("Cannot gravity drain to anything!");
+                        }
+
+                    }
                 }
                 else if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
                 {
                     sb.AppendLine("Not enough outlet capacity!");
                     sb.AppendLine("Not enough detention capacity!");
-                } else
-                {
-                    sb.AppendLine("Stormwater Accumulation: " + InletStormwaterAccululation);
-                    sb.AppendLine("Inlet Elevation: " + inletHeight);
                 }
-               
-                sb.AppendLine("District SWA: " + DistrictStormwaterAccumulation);
-                sb.AppendLine("District Inlet Cap: " + DistrictInletCapacity);
-                sb.AppendLine("Inlet Capacity: " + this.m_stormWaterIntake);
+                else
+                {
+                    sb.AppendLine("SWA | Inlet/" + organization+ ": " + InletStormwaterAccululation + "/" + DistrictStormwaterAccumulation);
+                }
+                sb.AppendLine("ELEV | Inlet/Water: " + inletHeight.ToString(floatFormat) + "/" + waterSurfaceElevation.ToString(floatFormat));
+                sb.AppendLine("Inlet | Rate/Cap: " + InletHydraulicRate + "/" + this.m_stormWaterIntake);
+                sb.AppendLine(organization + " | Rate/Cap: " + DistrictHydraulicRate  + "/" + DistrictInletCapacity);
             }
             else if (this.m_stormWaterOutlet > 0)
             {
 
                 int DistrictOutletCapacity = (int)Hydraulics.getDistrictOutletCapacity(buildingID);
                 int OutletStormwaterAccumulation = (int)Hydraulics.getStormWaterAccumulationForOutlet(buildingID);
-                int outletHeight = (int)data.m_position.y;
+                float outletHeight = data.m_position.y;
+                if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                    outletHeight += this.m_invert;
+                float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position + this.m_waterLocationOffset));
+                int outletHydraulicRate = (int)Hydraulics.getHydraulicRate(buildingID);
+                int outletVariableCapacity = (int)Hydraulics.getVariableCapacity(buildingID);
+                int districtVariableCapacity = (int)Hydraulics.getDistrictVariableCapacity(buildingID, Hydraulics.getOutletList());
+                int DistrictHydraulicRate = (int)Hydraulics.getDistrictHydraulicRate(buildingID, Hydraulics.getOutletList());
+                
                 if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
                 {
-                    sb.AppendLine("No inlets in distrct!");
-                } else if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
-                {
-                    sb.AppendLine("Outlet at maximum capacity!");
+                    sb.AppendLine("No inlets " + area + "!");
                 }
-                sb.AppendLine("Outlet Elevation: " + outletHeight);
-                sb.AppendLine("District Outlet Capacity: " + DistrictOutletCapacity);
-                sb.AppendLine("Available SWA: " + OutletStormwaterAccumulation);
-                sb.AppendLine("Outlet Capacity: " + this.m_stormWaterOutlet);
-            } else if (this.m_stormWaterDetention > 0 )
+                else if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
+                {
+                    sb.AppendLine("Outlet rate at capacity!");
+                }
+                else if ((data.m_problems & Notification.Problem.Flood) != Notification.Problem.None && (data.m_problems & Notification.Problem.MajorProblem) != Notification.Problem.None)
+                {
+                    sb.AppendLine("Outlet is fully surcharged!");
+                }
+                else if ((data.m_problems & Notification.Problem.Flood) != Notification.Problem.None)
+                {
+                    sb.AppendLine("Operating at reduced capacity.");
+                }
+
+                sb.AppendLine("Available SWA " + area + ": " + OutletStormwaterAccumulation);
+                
+                sb.AppendLine("ELEV | " + elevationControl + "/Water " + outletHeight.ToString(floatFormat) + "/" + waterSurfaceElevation.ToString(floatFormat));
+                //sb.Append("x=" + (data.m_position + this.m_waterLocationOffset).x + " y=" + (data.m_position + this.m_waterLocationOffset).y + " z=" + (data.m_position + this.m_waterLocationOffset).z);
+                sb.AppendLine("Outlet | Rate/Cap: " + outletHydraulicRate + "/" + outletVariableCapacity);
+                sb.AppendLine(organization + " | Rate/Cap: " + DistrictHydraulicRate + "/" + districtVariableCapacity);
+            }
+            else if (this.m_stormWaterDetention > 0)
             {
                 int DetainedStormwater = (int)Hydraulics.getDetainedStormwater(buildingID);
-                int RemainingCapacity = this.m_stormWaterDetention - DetainedStormwater;
+                int DistrictDetainedStormwater = (int)Hydraulics.getDistrictDetainedStormwater(buildingID);
                 int InfiltrationRate = this.m_stormWaterInfiltration;
                 int DistrictDetentionCapcity = (int)Hydraulics.getDistrictDetentionCapacity(buildingID);
+                int detentionRate = (int)Hydraulics.getHydraulicRate(buildingID);
+                float basinElevation = data.m_position.y;
+                float basinInvert = basinElevation + this.m_invert;
+                float basinSoffit = basinElevation + this.m_soffit;
+                float basinWSE = Hydraulics.getDetentionBasinWSE(buildingID);
                 if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
                 {
-                    sb.AppendLine("No inlets in distrct!");
-                } else
-                {
-                    sb.AppendLine("Detained Stormwater: " + DetainedStormwater);
+                    sb.AppendLine("No inlets " + area + "!");
                 }
-                if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
-                {
-                    sb.AppendLine("Detention basin is full!");
-                } else
-                {
-                    sb.AppendLine("Remaining Capacity: " + RemainingCapacity);
-                }                            
-                sb.AppendLine("Infiltration Rate: " + InfiltrationRate);
-                sb.AppendLine("District Detention Capacity: " + DistrictDetentionCapcity);
-                sb.AppendLine("Detention Basin Capacity: " + this.m_stormWaterDetention);
+                else {
+                    sb.AppendLine("Rate | Influx/Infiltration: " + detentionRate.ToString() +"/"+ InfiltrationRate.ToString());
+                }
+                sb.AppendLine("ELEV | Invert/Soffit: " + basinInvert.ToString(floatFormat) + "/" +basinSoffit.ToString(floatFormat));
+                sb.AppendLine("ELEV | Water Surface:" + basinWSE.ToString(floatFormat));
+                sb.AppendLine("Storage | " + DetainedStormwater + "/" + this.m_stormWaterDetention);
+                sb.AppendLine(organization + " Storage | " + DistrictDetainedStormwater + "/"+DistrictDetentionCapcity);
             }
            
             return sb.ToString();
@@ -906,6 +1085,10 @@ namespace Rainfall
 
         public override bool RequireRoadAccess()
         {
+            if (this.m_filter)
+            {
+                return true;
+            }
             return base.RequireRoadAccess() || this.m_workPlaceCount0 != 0 || this.m_workPlaceCount1 != 0 || this.m_workPlaceCount2 != 0 || this.m_workPlaceCount3 != 0;
         }
 
@@ -928,6 +1111,28 @@ namespace Rainfall
             }
             return true;
         }
+        public override bool CheckUnlocking()
+        {
+            MilestoneInfo unlockMilestoneInfo = null;
+            try
+            {
+                if (!Singleton<UnlockManager>.instance.m_allMilestones.TryGetValue("Milestone"+this.m_milestone.ToString(), out unlockMilestoneInfo))
+                {
+                    unlockMilestoneInfo = null;
+                } else
+                {
+                    //Debug.Log("Successcully read milestone");
+                    this.m_info.m_UnlockMilestone = unlockMilestoneInfo;
+                }
+            }
+            catch
+            {
+                //Debug.Log("Could not read milestone");
+                unlockMilestoneInfo = null;
+            }
+            return base.CheckUnlocking();
+        }
+        
 
     }
 }

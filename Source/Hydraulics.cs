@@ -15,7 +15,7 @@ namespace Rainfall
         private BuildingManager _buildingManager;
         private DistrictManager _districtManager;
         private TerrainManager _terrainManager;
-        private WaterSimulation _waterSimulation;
+        private WaterSimulation _waterSimulation; 
         private UIPanel serviceBuildingInfo;
         private CityServiceWorldInfoPanel _cityServiceWorldInfoPanel;
         private GameObject buildingWindowGameObject;
@@ -32,6 +32,10 @@ namespace Rainfall
         private float _infiltrationPeriod;
         private bool created = false;
         private float _relocateDelay;
+        private int[] _hydraulicRate;
+        private int[] _easyModeSWA;
+        private int[] _pollutants;
+        private int[] _variableCapacity;
         
         private HashSet<ushort> _SDinlets;
         private HashSet<ushort> _SDoutlets;
@@ -58,6 +62,12 @@ namespace Rainfall
             _districtManager = Singleton<DistrictManager>.instance;
             _terrainManager = Singleton<TerrainManager>.instance;
             _waterSimulation = _terrainManager.WaterSimulation;
+            /*Debug.Log("milestone names are:");
+            foreach (KeyValuePair<string, MilestoneInfo> pair in Singleton<UnlockManager>.instance.m_allMilestones)
+            {
+                Debug.Log(pair.Key);
+            }*/
+
         }
 
         public override void OnCreated(IThreading threading)
@@ -70,6 +80,9 @@ namespace Rainfall
             _stormwaterAccumulation = new int[_capacity];
             _detainedStormwater = new int[_capacity];
             _districts = new byte[_capacity];
+            _hydraulicRate = new int[_capacity];
+            _variableCapacity = new int[_capacity];
+            _easyModeSWA = new int[_capacity];
             _SDinlets = new HashSet<ushort>();
             _SDoutlets = new HashSet<ushort>();
             _SDdetentionBasins = new HashSet<ushort>();
@@ -189,6 +202,7 @@ namespace Rainfall
                 _capacity = _buildingManager.m_buildings.m_buffer.Length;
                 _stormwaterAccumulation = new int[_capacity];
                 _districts = new byte[_capacity];
+                _pollutants = new int[_capacity];
                 //Debug.Log("Initialized arrays");
                 initialized = true;
                 terminated = false;
@@ -266,7 +280,14 @@ namespace Rainfall
                         
                         if (currentStormDrainAi.m_stormWaterIntake != 0)
                         {
-                        
+                            /*
+                            if (currentBuilding.Info.m_placementMode != BuildingInfo.PlacementMode.OnTerrain || currentBuilding.Info.m_placementMode != BuildingInfo.PlacementMode.Shoreline)
+                            {
+                                if (currentStormDrainAi.m_electricityConsumption == 0)
+                                    currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.OnTerrain;
+                                else
+                                    currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.Shoreline;
+                            }*/
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
                          
                         }
@@ -287,6 +308,7 @@ namespace Rainfall
                        
                         if (currentStormDrainAi.m_stormWaterOutlet != 0)
                         {
+                            /*
                             if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
                             {
                                 if (currentBuilding.Info.m_placementMode == BuildingInfo.PlacementMode.Shoreline)
@@ -295,6 +317,7 @@ namespace Rainfall
                             {
                                 currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.Shoreline;
                             }
+                            */
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
                           
                         }
@@ -317,7 +340,10 @@ namespace Rainfall
                         if (currentStormDrainAi.m_stormWaterDetention != 0)
                         {
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
-                         
+                            /*if (currentBuilding.Info.m_placementMode != BuildingInfo.PlacementMode.OnGround)
+                            {
+                                currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.OnGround;
+                            }*/
                             if (_simulationTimeCount > _infiltrationPeriod)
                             {
                                 Hydraulics.removeDetainedStormwater(id, currentStormDrainAi.m_stormWaterInfiltration);
@@ -370,7 +396,7 @@ namespace Rainfall
                             StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                             if (currentBuildingAI != null)
                             {
-                                if (currentBuildingAI.m_stormWaterOutlet != 0 && currentBuildingAI.m_electricityConsumption == 0)
+                                if (currentBuildingAI.m_stormWaterOutlet != 0 /*&& currentBuildingAI.m_electricityConsumption == 0*/)
                                 {
                                     _relocateDelay = 0.1f;
                                     Vector3 newPosition = currentBuilding.m_position;
@@ -407,7 +433,35 @@ namespace Rainfall
 
                                 }
                             }
+                            NaturalDrainageAI currentBuildingNDAI = currentBuilding.Info.m_buildingAI as NaturalDrainageAI;
+                            if (currentBuildingNDAI != null)
+                            {
+                                if (currentBuildingNDAI.m_standingWaterDepth > 0)
+                                {
+                                    try
+                                    {
+                                        TerrainManager instance = Singleton<TerrainManager>.instance;
+                                        WaterSimulation waterSimulation = instance.WaterSimulation;
+                                        if (currentBuilding.m_waterSource != 0)
+                                        {
+                                            WaterSource sourceData = waterSimulation.LockWaterSource(currentBuilding.m_waterSource);
+                                          
+                                            if (sourceData.m_target > currentBuilding.m_position.y + 1f)
+                                            {
+                                                _relocateDelay = 0.1f;
+                                                sourceData.m_target = (ushort)(sourceData.m_target - 1u);
+                                            }
+                                            waterSimulation.UnlockWaterSource(currentBuilding.m_waterSource, sourceData);
+                                        }
+                                    } catch (Exception e)
+                                    {
+                                        Debug.Log("Tried to elevate natural drainage asset. encountered exception " + e.ToString());
+;                                    }
+                                }
+                            }
+                          
                         }
+
                         else if (Input.GetKey(KeyCode.PageUp))
                         {
 
@@ -417,7 +471,7 @@ namespace Rainfall
                             StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                             if (currentBuildingAI != null)
                             {
-                                if (currentBuildingAI.m_stormWaterOutlet != 0 && currentBuildingAI.m_electricityConsumption == 0)
+                                if (currentBuildingAI.m_stormWaterOutlet != 0/* && currentBuildingAI.m_electricityConsumption == 0*/)
                                 {
                                     _relocateDelay = 0.1f;
                                     Vector3 newPosition = currentBuilding.m_position;
@@ -437,7 +491,7 @@ namespace Rainfall
                                                 //Debug.Log("[RF] vector has water");
                                                 if (!_terrainManager.GetClosestWaterPos(ref vector, currentBuildingAI.m_waterEffectDistance))
                                                 {
-                                                        _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
+                                                    _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
                                                 }
                                             }
                                             currentBuilding.m_waterSource = 0;
@@ -450,9 +504,36 @@ namespace Rainfall
                                         Debug.Log("[RF]Hydraulics Could not raise " + buildingID + " encountered exception " + e.ToString());
 
                                     }
-                                    
+
                                 }
                             }
+
+                            NaturalDrainageAI currentBuildingNDAI = currentBuilding.Info.m_buildingAI as NaturalDrainageAI;
+                            if (currentBuildingNDAI != null)
+                            {
+                                if (currentBuildingNDAI.m_standingWaterDepth > 0)
+                                {
+                                    try
+                                    {
+                                        TerrainManager instance = Singleton<TerrainManager>.instance;
+                                        WaterSimulation waterSimulation = instance.WaterSimulation;
+                                        if (currentBuilding.m_waterSource != 0)
+                                        {
+                                            WaterSource sourceData = waterSimulation.LockWaterSource(currentBuilding.m_waterSource);
+                                            
+                                                _relocateDelay = 0.1f;
+                                                sourceData.m_target = (ushort)(sourceData.m_target + 1u);
+                                            waterSimulation.UnlockWaterSource(currentBuilding.m_waterSource, sourceData);
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Debug.Log("Tried to elevate natural drainage asset. encountered exception " + e.ToString());
+                                        ;
+                                    }
+                                }
+                            }
+
                         }
                     } else
                     {
@@ -469,30 +550,57 @@ namespace Rainfall
         public static int getStormwaterAccumulation(int id)
         {
             //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " is " + Hydraulics.instance._stormwaterAccumulation[id]);
-            return Hydraulics.instance._stormwaterAccumulation[id];
+            //if (ModSettings.EasyMode == false || Hydraulics.instance._SDinlets.Contains((ushort)id))
+                return Hydraulics.instance._stormwaterAccumulation[id];
+            //Debug.Log("[RF].Hydraulics.getStormwaterAccumulation() Easmy mode");
+            //return Hydraulics.instance._easyModeSWA[id];
         }
         public static int addStormwaterAccumulation(int id, int amount)
         {
-            Hydraulics.instance._stormwaterAccumulation[id] += amount;
-            //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " is raised to " + Hydraulics.instance._stormwaterAccumulation[id]);
-            return Hydraulics.instance._stormwaterAccumulation[id];
+            //if (ModSettings.EasyMode == false || Hydraulics.instance._SDinlets.Contains((ushort)id))
+            //{
+                Hydraulics.instance._stormwaterAccumulation[id] += amount;
+                //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " is raised to " + Hydraulics.instance._stormwaterAccumulation[id]);
+                return Hydraulics.instance._stormwaterAccumulation[id];
+            //}
+            //Debug.Log("[RF].Hydraulics.addStormwaterAccumulation EAsy mode");
+
+           //Hydraulics.instance._easyModeSWA[id] += amount;
+            //return Hydraulics.instance._easyModeSWA[id];
         }
         public static int removeStormwaterAccumulation(int id, int amount)
         {
             if (amount < 0)
                 return 0;
-            if (Hydraulics.instance._stormwaterAccumulation[id] > amount)
+            //if (ModSettings.EasyMode == false || Hydraulics.instance._SDinlets.Contains((ushort)id))
+            //{
+                if (Hydraulics.instance._stormwaterAccumulation[id] > amount)
+                {
+                    Hydraulics.instance._stormwaterAccumulation[id] -= amount;
+                    //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " has dropped to " + Hydraulics.instance._stormwaterAccumulation[id]);
+                    return amount;
+                }
+                else
+                {
+                    int removed = Hydraulics.instance._stormwaterAccumulation[id];
+                    Hydraulics.instance._stormwaterAccumulation[id] = 0;
+                    //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " has dropped to " + Hydraulics.instance._stormwaterAccumulation[id]);
+                    return removed;
+                }
+            //}
+            /*Debug.Log("[RF].Hydraulics.removeSWA EAsy mode");
+            if (Hydraulics.instance._easyModeSWA[id] > amount)
             {
-                Hydraulics.instance._stormwaterAccumulation[id] -= amount;
-                //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " has dropped to " + Hydraulics.instance._stormwaterAccumulation[id]);
+                Hydraulics.instance._easyModeSWA[id] -= amount;
                 return amount;
-            } else
+            }
+            else
             {
-                int removed = Hydraulics.instance._stormwaterAccumulation[id];
-                Hydraulics.instance._stormwaterAccumulation[id] = 0;
-                //Debug.Log("[RF].Hydraulics Stormwater Accumulation at " + id.ToString() + " has dropped to " + Hydraulics.instance._stormwaterAccumulation[id]);
+                int removed = Hydraulics.instance._easyModeSWA[id];
+                Hydraulics.instance._easyModeSWA[id] = 0;
                 return removed;
             }
+            */
         }
         public static int getDetainedStormwater(int id)
         {
@@ -527,14 +635,30 @@ namespace Rainfall
         public static int getDistrictStormwaterAccumulation(byte district)
         {
             int districtStormwaterAccumulation = 0;
+
             foreach (ushort id in Hydraulics.instance._SDinlets)
             {
-                if (Hydraulics.instance._districts[id] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                 {
                     districtStormwaterAccumulation += Hydraulics.instance._stormwaterAccumulation[id];
                 }
 
             }
+
+            /*if (ModSettings.EasyMode == true)
+            {
+                Debug.Log("[RF].Hydraulics.getDistrictSWA EAsy mode");
+                HashSet<ushort> buildingList = Hydrology.getBuildingList();
+                foreach (ushort id in buildingList)
+                {
+                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                    {
+                        districtStormwaterAccumulation += Hydraulics.instance._easyModeSWA[id];
+                    }
+
+                }
+            }*/
+            
             //Debug.Log("[RF].Hydraulics Stormwater Accumulation at District " + district.ToString() + " is " + districtStormwaterAccumulation);
             return districtStormwaterAccumulation;
         }
@@ -550,18 +674,20 @@ namespace Rainfall
             int districtOutletCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDoutlets)
             {
-                if (Hydraulics.instance._districts[id] == district)
-                {
-                    Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
-                    if (currentBuildingAI != null)
+                
+                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                     {
-                        if (currentBuildingAI.m_stormWaterOutlet != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
+                        Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                        StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
+                        if (currentBuildingAI != null)
                         {
-                            districtOutletCapacity += currentBuildingAI.m_stormWaterOutlet;
+                            if (currentBuildingAI.m_stormWaterOutlet != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                            {
+                                districtOutletCapacity += currentBuildingAI.m_stormWaterOutlet;
+                            }
                         }
                     }
-                }
+                
 
             }
             //Debug.Log("[RF].Hydraulics Stormdrain Capacity at District " + district.ToString() + " is " + districtOutletCapacity);
@@ -579,13 +705,13 @@ namespace Rainfall
             int districtInletCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDinlets)
             {
-                if (Hydraulics.instance._districts[id] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                     if (currentBuildingAI != null)
                     {
-                        if (currentBuildingAI.m_stormWaterIntake != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
+                        if (currentBuildingAI.m_stormWaterIntake != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
                         {
                             districtInletCapacity += currentBuildingAI.m_stormWaterIntake;
                         }
@@ -609,13 +735,13 @@ namespace Rainfall
             int districtDetentionCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
             {
-                if (Hydraulics.instance._districts[id] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                     if (currentBuildingAI != null)
                     {
-                        if (currentBuildingAI.m_stormWaterDetention != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
+                        if (currentBuildingAI.m_stormWaterDetention != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
                         {
                             districtDetentionCapacity += currentBuildingAI.m_stormWaterDetention;
                         }
@@ -638,7 +764,7 @@ namespace Rainfall
             int districtDetainedStormwater = 0;
             foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
             {
-                if (Hydraulics.instance._districts[id] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
@@ -646,6 +772,7 @@ namespace Rainfall
                     {
                         bool flag1 = currentBuildingAI.m_stormWaterDetention != 0;
                         bool flag2 = (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                        bool flag3 = (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
                         if (flag1 && flag2)
                         {
                             districtDetainedStormwater += Hydraulics.getDetainedStormwater(id);
@@ -670,33 +797,76 @@ namespace Rainfall
         
        
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
-            if (Hydraulics.instance._SDoutlets.Count > 0)
+            if (Hydraulics.instance._SDoutlets.Count > 0 || Hydraulics.instance._SDdetentionBasins.Count > 0)
             {
                 foreach (ushort id in Hydraulics.instance._SDoutlets)
                 {
-                    if (Hydraulics.instance._districts[id] == district)
+                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                     {
+
                         Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                         StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
                         StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
-                        if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0)
-                            return true;
+                        if ((currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                        {
+                            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                            {
+                                float inletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentInlet.m_position + currentInletAI.m_waterLocationOffset));
+                                float outletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
+
+                                if (Mathf.Max(currentInlet.m_position.y, inletWSE) > Mathf.Max(currentOutlet.m_position.y + currentOutletAI.m_invert, outletWSE) || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0)
+                                    return true;
+                            }
+                            else if (ModSettings.GravityDrainageOption == ModSettings._SimpleGravityDrainageOption)
+                            {
+
+                                if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0)
+                                    return true;
+                            }
+                            else if (ModSettings.GravityDrainageOption == ModSettings._IgnoreGravityDrainageOption)
+                            {
+                                return true;
+                            }
+                        }
                     }
                 }
                 foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
                 {
-                    Building currentDetentionBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    StormDrainAI currentDetentionBasinAI = currentDetentionBasin.Info.m_buildingAI as StormDrainAI;
-                    if (currentDetentionBasinAI != null)
+                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                     {
-                        bool flag1 = currentDetentionBasinAI.m_stormWaterDetention > 0;
-                        bool flag2 = Hydraulics.instance._districts[id] == district;
-                        bool flag3 = (currentDetentionBasin.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
-                        if (flag1 && flag2 && flag3) { 
-                            return true;
+                        Building currentDetentionBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                        StormDrainAI currentDetentionBasinAI = currentDetentionBasin.Info.m_buildingAI as StormDrainAI;
+                        StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
+                        if (currentDetentionBasinAI != null)
+                        {
+                            bool flag1 = currentDetentionBasinAI.m_stormWaterDetention > 0;
+                            bool flag2 = Hydraulics.instance._districts[id] == district;
+                            bool flag3 = (currentDetentionBasin.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                            bool flag4 = false;
+                            bool flag5 = (currentDetentionBasin.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                            {
+                                float inletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentInlet.m_position + currentInletAI.m_waterLocationOffset));
+                                float basinWSE = Hydraulics.getDetentionBasinWSE(id);
+
+                                if (Mathf.Max(currentInlet.m_position.y, inletWSE) >  basinWSE || currentInletAI.m_electricityConsumption > 0)
+                                    flag4 = true;
+                            }
+                            else if (ModSettings.GravityDrainageOption == ModSettings._SimpleGravityDrainageOption)
+                            {
+
+                                flag4 = true;
+                            }
+                            else if (ModSettings.GravityDrainageOption == ModSettings._IgnoreGravityDrainageOption)
+                            {
+                                flag4 = true;
+                            }
+                            if (flag1 && flag2 && flag3 && flag4 && flag5)
+                            {
+                                return true;
+                            }
                         }
-                    }
-                        
+                    } 
                 }
             }
             return false;
@@ -705,14 +875,42 @@ namespace Rainfall
         {
             Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletId];
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
-
-            if (Hydraulics.instance._districts[outletId] == district)
+            if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[outletId] == district || ModSettings.DistrictControl == false)
             {
                 Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletId];
                 StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
                 StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
-                if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0)
+                if ((currentOutlet.m_problems & Notification.Problem.TurnedOff) != Notification.Problem.None) {
+                    return false;
+                }
+                if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                {
+                    float inletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentInlet.m_position + currentInletAI.m_waterLocationOffset));
+                    if (currentOutletAI.m_stormWaterOutlet > 0)
+                    {
+                        float outletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
+
+                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > Mathf.Max(currentOutlet.m_position.y + currentOutletAI.m_invert, outletWSE) || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0 )
+                            return true;
+                    } else if (currentOutletAI.m_stormWaterDetention > 0)
+                    {
+                        float basinWSE = Hydraulics.getDetentionBasinWSE(outletId);
+                        bool flag3 = (currentOutlet.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                        bool flag4 = false;
+                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > basinWSE || currentInletAI.m_electricityConsumption > 0)
+                            flag4 = true;
+                        if (flag3 && flag4)
+                            return true;
+                    }
+                
+                } else if (ModSettings.GravityDrainageOption == ModSettings._SimpleGravityDrainageOption)
+                {
+                    if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 || currentInletAI.m_electricityConsumption > 0 || currentOutletAI.m_stormWaterDetention > 0)
+                        return true;
+                } else if (ModSettings.GravityDrainageOption == ModSettings._IgnoreGravityDrainageOption)
+                {
                     return true;
+                }
             }
             
             return false;
@@ -725,7 +923,7 @@ namespace Rainfall
 
             foreach (ushort id in Hydraulics.instance._SDoutlets)
             {
-                if (Hydraulics.instance._districts[id] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
                 {
                     Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
@@ -734,7 +932,8 @@ namespace Rainfall
                         bool flag1 = currentOutletAI.m_stormWaterOutlet > 0;
                         bool flag2 = checkGravityFlowForInlet(inletID, id);
                         bool flag3 = (currentOutlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
-                        if (flag1 && flag2 && flag3)
+                        bool flag4 = (currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        if (flag1 && flag2 && flag3 && flag4)
                         {
                             outletCapacity += currentOutletAI.m_stormWaterOutlet;
                         }
@@ -742,6 +941,64 @@ namespace Rainfall
                 }
             }
             return outletCapacity;
+        }
+        public static ushort getLowestOutletForInlet(int inletID)
+        {
+            float outletElev = 999999f;
+            ushort outletID = 0;
+            Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletID];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
+
+            foreach (ushort id in Hydraulics.instance._SDoutlets)
+            {
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                {
+                    Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                    StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
+                    if (currentOutletAI != null)
+                    {
+                        
+                            bool flag1 = currentOutletAI.m_stormWaterOutlet > 0;
+                            bool flag3 = (currentOutlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                            float currentOutletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
+                            float currentOutletElev = Mathf.Max(currentOutletWSE, currentOutlet.m_position.y + currentOutletAI.m_invert);
+                            bool flag2 = (currentOutletElev < outletElev);
+                            bool flag4 = (currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                            if (flag1 && flag2 && flag3 && flag4)
+                            {
+                                outletID = id;
+                                outletElev = currentOutletElev;
+                            }
+                        
+                    }
+                }
+            }
+            foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
+            {
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                {
+                    Building currentBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                    StormDrainAI currentBasinAI = currentBasin.Info.m_buildingAI as StormDrainAI;
+                    if (currentBasinAI != null)
+                    {
+                        if (currentBasinAI.m_stormWaterDetention > 0)
+                        {
+                            float basinWSE = Hydraulics.getDetentionBasinWSE(id);
+                            bool flag2 = (currentBasin.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                            bool flag3 = (currentBasin.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                            bool flag4 = false;
+                            if (basinWSE < outletElev)
+                                flag4 = true;
+                            if (flag2 && flag3 && flag4)
+                            {
+                                outletID = id;
+                                outletElev = basinWSE;
+                            }
+                        }
+                    }
+                }
+            }
+            return outletID;
         }
         public static int getStormWaterAccumulationForOutlet(int outletID)
         {
@@ -751,7 +1008,7 @@ namespace Rainfall
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentOutlet.m_position);
             foreach (ushort inletId in Hydraulics.instance._SDinlets)
             {
-                if (Hydraulics.instance._districts[inletId] == district)
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[inletId] == district || ModSettings.DistrictControl == false)
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletId];
                     StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
@@ -768,6 +1025,20 @@ namespace Rainfall
                 }
 
             }
+            /*if (ModSettings.EasyMode == true)
+            {
+                Debug.Log("[RF].Hydraulics.getSWA for Outlet EAsy mode");
+                HashSet<ushort> buildingList = Hydrology.getBuildingList();
+                foreach (ushort buildingID in buildingList)
+                {
+                    Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
+                    byte buildingDistrict = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+                    if (ModSettings.DistrictControl == true && buildingDistrict == district || ModSettings.DistrictControl == false)
+                    {
+                        stormwaterAccumulation += Hydraulics.instance._easyModeSWA[buildingID];
+                    }
+                }
+            }*/
             return stormwaterAccumulation;
         }
         public static int removeDistrictStormwaterAccumulation(byte district, int amount, int outletID, bool checkGravityFlow)
@@ -775,8 +1046,13 @@ namespace Rainfall
             int districtStormwaterAccumulation = Hydraulics.getDistrictStormwaterAccumulation(district);
             int minimumStormwaterAccumulation = amount;
             Building outletBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletID];
+            if ((outletBuilding.m_problems & Notification.Problem.TurnedOff) != Notification.Problem.None)
+                return 0;
+
             StormDrainAI outletBuildingAI = outletBuilding.Info.m_buildingAI as StormDrainAI;
             bool simulatePollution = false;
+            bool simulateFiltration = false;
+            int pollutantsFromInlet = 0;
             WaterSource outletWaterSource = new WaterSource();
             if (outletBuildingAI != null)
             {
@@ -787,6 +1063,16 @@ namespace Rainfall
                     outletWaterSource.m_pollution = 0;
                 } 
             } 
+            if (/*ModSettings.EasyMode == true || */ModSettings.SimulatePollution == false || outletBuildingAI.m_filter == true)
+            {
+                //Debug.Log("[RF].Hydraulics.removeDistrictSWA EAsy mode means no pollution");
+                //No pollution mechanics in easy mode or if you turn of pollution simulation
+                simulatePollution = false;
+            }
+            if (outletBuildingAI.m_filter == true)
+            {
+                simulateFiltration = true;
+            }
             
             if (districtStormwaterAccumulation <= amount)
             {
@@ -794,58 +1080,136 @@ namespace Rainfall
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     bool flag1 = Hydraulics.instance._districts[id] == district;
+                    if (ModSettings.DistrictControl == false)
+                        flag1 = true;
                     bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
                     bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
                     bool flag4;
+                    bool flag5 = (currentInlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
                     if (checkGravityFlow == true)
                         flag4 = Hydraulics.checkGravityFlowForInlet(id, outletID);
                     else
                         flag4 = true;
 
-                    if (flag1 && flag2 && flag3 && flag4)
+                    if (flag1 && flag2 && flag3 && flag4 && flag5)
                     {
                         if (simulatePollution)
                         {
 
                             outletWaterSource.m_pollution += (uint)(Mathf.Round((float)Hydraulics.instance._stormwaterAccumulation[id] * 0.5f * ((float)currentInlet.m_waterPollution / 255f)));
-                            //Debug.Log("currentInlet.m_waterPolution = " + currentInlet.m_waterPollution.ToString());
+                            //Debug.Log("currentInlet.m_waterPollution = " + currentInlet.m_waterPollution.ToString());
+                        } else if (simulateFiltration)
+                        {
+                            pollutantsFromInlet += (int)(Mathf.Round((float)Hydraulics.instance._stormwaterAccumulation[id] * 0.5f * ((float)currentInlet.m_waterPollution / 255f)));
                         }
                         Hydraulics.instance._stormwaterAccumulation[id] = 0;
                        
                     }
                 }
+                /*
+                if (ModSettings.EasyMode == true)
+                {
+                    Debug.Log("[RF].Hydraulics.removeDistrictSWA EAsy mode less than total");
+                    HashSet<ushort> buildingList = Hydrology.getBuildingList();
+                    Debug.Log(buildingList.Count);
+                    foreach (ushort buildingID in buildingList)
+                    {
+                        Debug.Log(buildingID);
+                        try {
+                            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
+                            byte buildingDistrict = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+                            bool flag1 = buildingDistrict == district;
+                            if (ModSettings.DistrictControl == false)
+                                flag1 = true;
+                            bool flag2 = Hydraulics.instance._easyModeSWA[buildingID] > 0;
+                            bool flag3 = (currentBuilding.m_problems & Notification.Problem.Water) == Notification.Problem.None;
+                            //Ignoring Gravity Effects for Easy mode because Easy mode
+                            if (flag1 && flag2 && flag3)
+                            {
+
+                                Hydraulics.instance._easyModeSWA[buildingID] = 0;
+
+                            }
+                        } catch (Exception e)
+                        {
+                            Debug.Log("Couldn't work for building id " + buildingID.ToString() + " because exception " + e.ToString());
+                        }
+
+
+                    }
+                }
+                */
                 if (simulatePollution)
                 {
                     outletWaterSource.m_pollution = (uint)Mathf.Min(outletWaterSource.m_pollution, outletWaterSource.m_water * 100 / Mathf.Max(100, Hydraulics.instance._waterSimulation.GetPollutionDisposeRate() * 100)); 
                     //Debug.Log("[RF].Hydraulics Set pollution at building " + outletID.ToString() + " to " + outletWaterSource.m_pollution.ToString() + " out of " + outletWaterSource.m_water.ToString());
-                    Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                    
+                } else if (simulateFiltration)
+                {
+                    Hydraulics.addPollutants(outletID, (int)(Mathf.Min(pollutantsFromInlet, outletWaterSource.m_water * 100 / Mathf.Max(100, Hydraulics.instance._waterSimulation.GetPollutionDisposeRate() * 100))/10f));
+
                 }
+                if (outletBuildingAI != null)
+                {
+                    if (outletBuilding.m_waterSource != 0 && outletBuildingAI.m_stormWaterOutlet > 0)
+                    {
+                        Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                    }
+                }
+                //Debug.Log("[RF].Hydraulics.removeDistrictSWA EAsy mode less than total made it to return " + districtStormwaterAccumulation);
                 //Debug.Log("[RF].Hydraulics Removed districtStormwaterAccumulation = " + districtStormwaterAccumulation.ToString() + " From District " + district.ToString());
                 return districtStormwaterAccumulation;
             } else
             {
                 int removed = 0;
-                HashSet<ushort> districtInlets = new HashSet<ushort>();
-                HashSet<ushort> emptyInlets = new HashSet<ushort>();
+                HashSet<ushort> districtSources = new HashSet<ushort>();
+                HashSet<ushort> emptySources = new HashSet<ushort>();
                 foreach (ushort id in Hydraulics.instance._SDinlets)
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    bool flag1 = Hydraulics.instance._districts[id] == district;
+                    bool flag1 = (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false);
                     bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
                     bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
                     bool flag4;
+                    bool flag5 = (currentInlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
                     if (checkGravityFlow == true)
                         flag4 = Hydraulics.checkGravityFlowForInlet(id, outletID);
                     else
                         flag4 = true;
                     
-                    if (flag1 && flag2 && flag3 && flag4)
+                    if (flag1 && flag2 && flag3 && flag4 && flag5)
                     {
-                        districtInlets.Add(id);
+                        districtSources.Add(id);
                         if (minimumStormwaterAccumulation > Hydraulics.instance._stormwaterAccumulation[id])
                             minimumStormwaterAccumulation = Hydraulics.instance._stormwaterAccumulation[id];
                     }
                 }
+                /*if (ModSettings.EasyMode == true)
+                {
+                    Debug.Log("[RF].Hydraulics.removeDistrictSWA EAsy mode greater than total");
+                    HashSet<ushort> buildingList = Hydrology.getBuildingList();
+                    foreach (ushort buildingID in buildingList)
+                    {
+                        Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
+                        byte buildingDistrict = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+                        bool flag1 = buildingDistrict == district;
+                        if (ModSettings.DistrictControl == false)
+                            flag1 = true;
+                        bool flag2 = Hydraulics.instance._easyModeSWA[buildingID] > 0;
+                        bool flag3 = (currentBuilding.m_problems & Notification.Problem.Water) == Notification.Problem.None;
+                        //Ignoring Gravity Effects for Easy mode because Easy mode
+                        if (flag1 && flag2 && flag3)
+                        {
+                            districtSources.Add(buildingID);
+                            if (minimumStormwaterAccumulation > Hydraulics.instance._easyModeSWA[buildingID])
+                                minimumStormwaterAccumulation = Hydraulics.instance._easyModeSWA[buildingID];
+
+                        }
+
+
+                    }
+                }
+                */
                 while (removed < amount)
                 {
                     int removalAmount = minimumStormwaterAccumulation;
@@ -853,21 +1217,21 @@ namespace Rainfall
                     minimumStormwaterAccumulation = amount - removed;
                     //Debug.Log("[RF].Hydrulics amount - removed = " + minimumStormwaterAccumulation.ToString());
                     
-                    foreach (ushort id in districtInlets)
+                    foreach (ushort id in districtSources)
                     {
                         /*Debug.Log("[RF].Hydrulics removed = " + removed.ToString());
                         Debug.Log("[RF].Hydrulics minimumStormwaterAccumulation = " + minimumStormwaterAccumulation.ToString());
                         Debug.Log("[RF].Hydrulics SDA = " + Hydraulics.getDistrictStormwaterAccumulation(id).ToString() + " at district " + district.ToString());
                         Debug.Log("[RF].Hydrulics SDA = " + Hydraulics.getStormwaterAccumulation(id).ToString() + " at building " + id.ToString());
                         */
-                        Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                        Building currentSource = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                         if (removed + removalAmount <= amount)
                         {
                             int justRemoved = Hydraulics.removeStormwaterAccumulation(id, removalAmount);
                             removed += justRemoved;
                             if (simulatePollution)
                             {
-                                outletWaterSource.m_pollution += (uint)(Mathf.Round((float)justRemoved * 0.5f * ((float)currentInlet.m_waterPollution / 255f)));
+                                outletWaterSource.m_pollution += (uint)(Mathf.Round((float)justRemoved * 0.5f * ((float)currentSource.m_waterPollution / 255f)));
                             }
                         }
                         else {
@@ -876,7 +1240,11 @@ namespace Rainfall
                             if (simulatePollution)
                             {
                                
-                                outletWaterSource.m_pollution += (uint)(Mathf.Round((float)justRemoved * 0.5f* ((float)currentInlet.m_waterPollution / 255f)));
+                                outletWaterSource.m_pollution += (uint)(Mathf.Round((float)justRemoved * 0.5f* ((float)currentSource.m_waterPollution / 255f)));
+                            }
+                            else if (simulateFiltration)
+                            {
+                                pollutantsFromInlet += (int)(Mathf.Round((float)Hydraulics.instance._stormwaterAccumulation[id] * 0.5f * ((float)currentSource.m_waterPollution / 255f)));
                             }
                         }
                         //Debug.Log("[RF].Hydrulics removed = " + removed.ToString());
@@ -887,42 +1255,60 @@ namespace Rainfall
                         
                         //Debug.Log("[RF].Hydrulics minimumStormwaterAccumulation = " + minimumStormwaterAccumulation.ToString());
                         if (Hydraulics.getStormwaterAccumulation(id) == 0)
-                            emptyInlets.Add(id);
+                            emptySources.Add(id);
                         else if (Hydraulics.getStormwaterAccumulation(id) < 0)
                         {
                             Hydraulics.instance._stormwaterAccumulation[id] = 0;
                             Debug.Log("[RF].Hydraulics Error SWS < 0");
-                            emptyInlets.Add(id);
+                            emptySources.Add(id);
                         }
                         if (removed >= amount)
                             break;
                     }
 
-                    foreach (ushort id in emptyInlets)
+                    foreach (ushort id in emptySources)
                     {
                         //Debug.Log("[RF].Hydraulics Removing empty inlet" + id.ToString());
-                        districtInlets.Remove(id);
+                        districtSources.Remove(id);
                     }
-                    emptyInlets.Clear();
-                    if (districtInlets.Count == 0)
+                    emptySources.Clear();
+                    if (districtSources.Count == 0)
                     {
                         if (simulatePollution)
                         {
                             outletWaterSource.m_pollution = (uint)Mathf.Min(outletWaterSource.m_pollution, outletWaterSource.m_water * 100 / Mathf.Max(100, Hydraulics.instance._waterSimulation.GetPollutionDisposeRate() * 100));
                             //Debug.Log("[RF].Hydraulics Set pollution at building " + outletID.ToString() + " to " + outletWaterSource.m_pollution.ToString() + " out of " + outletWaterSource.m_water.ToString());
-                            Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                        } else if (simulateFiltration)
+                        {
+                            Hydraulics.addPollutants(outletID, (int)(Mathf.Min(pollutantsFromInlet, outletWaterSource.m_water * 100 / Mathf.Max(100, Hydraulics.instance._waterSimulation.GetPollutionDisposeRate() * 100))/10f));
+                        }
+                        if (outletBuildingAI != null)
+                        {
+                            if (outletBuilding.m_waterSource != 0 && outletBuildingAI.m_stormWaterOutlet > 0)
+                            {
+                                Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                            }
                         }
                         //Debug.Log("[RF].Hydraulics Removed = " + removed.ToString() + " From District " + district.ToString());
                         return removed;
                     }
-                    
+                    if (districtSources.Count == 0 || removalAmount == 0)
+                    {
+                        break;
+                    }
                 }
             }
             if (simulatePollution)
             {
                 outletWaterSource.m_pollution = (uint)Mathf.Min(outletWaterSource.m_pollution, outletWaterSource.m_water * 100u / (uint)Mathf.Max(100, Hydraulics.instance._waterSimulation.GetPollutionDisposeRate() * 100));
                 //Debug.Log("[RF].Hydraulics Set pollution at building " + outletID.ToString() + " to " + outletWaterSource.m_pollution.ToString() + " out of " + outletWaterSource.m_water.ToString());
-                Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                if (outletBuildingAI != null)
+                {
+                    if (outletBuilding.m_waterSource != 0 && outletBuildingAI.m_stormWaterOutlet > 0)
+                    {
+                        Hydraulics.instance._waterSimulation.UnlockWaterSource(outletBuilding.m_waterSource, outletWaterSource);
+                    }
+                }
             }
             //Debug.Log("[RF].Hydraulics Removed amount =  " + amount.ToString() + " From District " + district.ToString());
             return amount;
@@ -959,5 +1345,129 @@ namespace Rainfall
             }
             return (InstanceID)baseSub.GetValue(_cityServiceWorldInfoPanel);
         }
+
+
+        public static int getHydraulicRate(int id)
+        {
+            //Debug.Log("[RF].Hydraulics HydraulicRate  at " + id.ToString() + " is " + Hydraulics.instance._hydraulicRate[id]);
+            return Hydraulics.instance._hydraulicRate[id];
+        }
+        public static int setHydraulicRate(int id, int amount)
+        {
+            Hydraulics.instance._hydraulicRate[id] = amount;
+            //Debug.Log("[RF].Hydraulics HydraulicRate  at " + id.ToString() + " is raised to " + Hydraulics.instance._hydraulicRate[id]);
+            return Hydraulics.instance._hydraulicRate[id];
+        }
+        
+        public static int getDistrictHydraulicRate(byte district, HashSet<ushort> structures)
+        {
+            int districtHydraulicRate = 0;
+            foreach (ushort id in structures)
+            {
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                {
+                    districtHydraulicRate += Hydraulics.instance._hydraulicRate[id];
+                }
+
+            }
+            //Debug.Log("[RF].Hydraulics HydraulicRate  at District " + district.ToString() + " is " + districtHydraulicRate);
+            return districtHydraulicRate;
+        }
+        public static int getDistrictHydraulicRate(int BuildingId, HashSet<ushort> structures)
+        {
+            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
+            return getDistrictHydraulicRate(district, structures);
+        }
+        public static HashSet<ushort> getInletList()
+        {
+            return Hydraulics.instance._SDinlets;
+        }
+        public static HashSet<ushort> getOutletList()
+        {
+            return Hydraulics.instance._SDoutlets;
+        }
+        public static HashSet<ushort> getDetentionBasinList()
+        {
+            return Hydraulics.instance._SDdetentionBasins;
+        }
+
+        public static int getVariableCapacity(int id)
+        {
+            //Debug.Log("[RF].Hydraulics VariableCapacity  at " + id.ToString() + " is " + Hydraulics.instance._variableCapacity[id]);
+            return Hydraulics.instance._variableCapacity[id];
+        }
+        public static int setVariableCapacity(int id, int amount)
+        {
+            Hydraulics.instance._variableCapacity[id] = amount;
+            //Debug.Log("[RF].Hydraulics VariableCapacity  at " + id.ToString() + " is raised to " + Hydraulics.instance._variableCapacity[id]);
+            return Hydraulics.instance._variableCapacity[id];
+        }
+
+        public static int getDistrictVariableCapacity(byte district, HashSet<ushort> structures)
+        {
+            int districtVariableCapacity = 0;
+            foreach (ushort id in structures)
+            {
+                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                {
+                    Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+                    if ((currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
+                        districtVariableCapacity += Hydraulics.instance._variableCapacity[id];
+                }
+
+            }
+            //Debug.Log("[RF].Hydraulics VariableCapacity  at District " + district.ToString() + " is " + districtVariableCapacity);
+            return districtVariableCapacity;
+        }
+        public static int getDistrictVariableCapacity(int BuildingId, HashSet<ushort> structures)
+        {
+            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
+            return getDistrictVariableCapacity(district, structures);
+        }
+        public static float getDetentionBasinWSE(int buildingID)
+        {
+            Building currentDetentionBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
+            StormDrainAI currentDetentionBasinAI = currentDetentionBasin.Info.m_buildingAI as StormDrainAI;
+            if (currentDetentionBasinAI != null && currentDetentionBasinAI.m_stormWaterDetention > 0)
+            {
+                int DetainedStormwater = (int)Hydraulics.getDetainedStormwater(buildingID);
+                float basinElevation = currentDetentionBasin.m_position.y;
+                float basinInvert = basinElevation + currentDetentionBasinAI.m_invert;
+                float basinSoffit = basinElevation + currentDetentionBasinAI.m_soffit;
+                float basinDepth = basinSoffit - basinInvert;
+                float basinWSE = basinInvert + basinDepth * (float)DetainedStormwater / (float)currentDetentionBasinAI.m_stormWaterDetention;
+                return basinWSE;
+            }
+            return 0f;
+        }
+        public static int addPollutants(int buildingId, int amount)
+        {
+            Hydraulics.instance._pollutants[buildingId] += amount;
+            return Hydraulics.instance._pollutants[buildingId];
+        }
+        public static int getPollutants(int buildingID)
+        {
+            return Hydraulics.instance._pollutants[buildingID];
+        }
+        public static int removePollutants(int buildingID, int amount)
+        {
+            int removed;
+            if (amount >= Hydraulics.getPollutants(buildingID))
+            {
+                removed = Hydraulics.instance._pollutants[buildingID];
+                Hydraulics.instance._pollutants[buildingID] = 0;
+                
+            }
+            else {
+                removed = amount;
+                Hydraulics.instance._pollutants[buildingID] -= amount;
+            }
+            return removed;
+        }
+        
     }
 }

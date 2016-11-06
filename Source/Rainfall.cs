@@ -35,10 +35,19 @@ namespace Rainfall
         public UIButton ResetAllButton;
         public UIDropDown PreviousStormDropDown;
         private string[] previousStormDropDownOptions = new string[] { "Start New Storm", "Continue from First Half", "Continue from Second Half", "End Previous Storm" };
-      
-        
-       
-        
+        public UICheckBox DistrictControlCheckBox;
+        public UISlider BuildingFloodingToleranceSlider;
+        public UISlider BuildingFloodedToleranceSlider;
+        public UISlider RoadwayFloodingToleranceSlider;
+        public UISlider RoadwayFloodedToleranceSlider;
+        public UICheckBox FreezeLandvaluesCheckBox;
+        public UICheckBox ImprovedInletMechanicsCheckBox;
+        public UICheckBox PreventRainBeforeMilestoneCheckBox;
+        //public UICheckBox EasyModeCheckBox;
+        public UICheckBox SimulatePollutionCheckBox;
+        private string[] gravityDrainageDropDownOptions = new string[] { "Ignore Gravity", "Simplified (Alpha) Gravity", "Improved (Beta) Gravity" };
+        public UIDropDown GravityDrainageDropDown;
+
         public List<OptionsItemBase> PublicBuildingsRunoffCoefficientSliders;
         public List<OptionsItemBase> PrivateBuildingsRunoffCoefficientSliders;
         
@@ -48,14 +57,32 @@ namespace Rainfall
             customStormDistribution = new StormDistributionIO();
             customDepthDurationFrequency = new DepthDurationFrequencyIO();
 
+
             UIHelperBase group = helper.AddGroup("General Options");
             ChirpForecastCheckBox = group.AddCheckbox("#RainForecast Chirps", ModSettings.ChirpForecasts, OnChirpForecastCheckBoxChanged) as UICheckBox;
             ChirpRainTweetsCheckBox = group.AddCheckbox("#Rainfall Chirps", ModSettings.ChirpRainTweets, OnChirpRainTweetsCheckBoxChanged) as UICheckBox;
+            //EasyModeCheckBox = group.AddCheckbox("Easy/Casual Mode", ModSettings.EasyMode, OnEasyModeCheckBoxChanged) as UICheckBox;
+            DistrictControlCheckBox = group.AddCheckbox("District Control", ModSettings.DistrictControl, OnDistrictControlCheckBoxChanged) as UICheckBox;
+            DistrictControlCheckBox = group.AddCheckbox("Simulate Pollution", ModSettings.SimulatePollution, OnSimulatePollutionCheckBoxChanged) as UICheckBox;
+            ImprovedInletMechanicsCheckBox = group.AddCheckbox("Improved Inlet Mechanics", ModSettings.ImprovedInletMechanics, OnImprovedInletMechanicsCheckBoxChanged) as UICheckBox;
+            PreventRainBeforeMilestoneCheckBox = group.AddCheckbox("Prevent Rain Before Milestone", ModSettings.PreventRainBeforeMilestone, OnPreventRainBeforeMilestoneCheckBoxChanged) as UICheckBox;
+
+            FreezeLandvaluesCheckBox = group.AddCheckbox("Prevent Building Upgrades from Increased Landvalue due to Rainwater", ModSettings.FreezeLandvalues, OnFreezeLandvaluesCheckBoxChanged) as UICheckBox;
             PreviousStormDropDown = group.AddDropdown("Previous Storm Options (IE Loading after you saved during a storm)", previousStormDropDownOptions, ModSettings.PreviousStormOption, OnPreviousStormOptionChanged) as UIDropDown;
+            GravityDrainageDropDown = group.AddDropdown("Gravity Drainage Options", gravityDrainageDropDownOptions, ModSettings.GravityDrainageOption, OnGravityDrainageOptionChanged) as UIDropDown;
             DifficultySlider = group.AddSlider("Difficulty", 0f, (float)ModSettings._maxDifficulty, (float)ModSettings._difficultyStep, (float)ModSettings.Difficulty, OnDifficultyChanged) as UISlider;
             DifficultySlider.tooltip = ModSettings.Difficulty.ToString() + "%";
             RefreshRateSlider = group.AddSlider("Refresh Rate", 1f, (float)ModSettings._maxRefreshRate, 1f, (float)ModSettings.RefreshRate, OnRefreshRateChanged) as UISlider;
             RefreshRateSlider.tooltip = ModSettings.RefreshRate.ToString() + " seconds";
+            BuildingFloodingToleranceSlider = group.AddSlider("Building Flooding Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodingTolerance, OnBuildingFloodingToleranceChanged) as UISlider;
+            BuildingFloodingToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodingTolerance / 100f).ToString() + " units";
+            BuildingFloodedToleranceSlider = group.AddSlider("Building Flooded Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodedTolerance, OnBuildingFloodedToleranceChanged) as UISlider;
+            BuildingFloodedToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodedTolerance/100f).ToString() + " units";
+            RoadwayFloodingToleranceSlider = group.AddSlider("Roadway Flooding Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodingTolerance, OnRoadwayFloodingToleranceChanged) as UISlider;
+            RoadwayFloodingToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodingTolerance / 100f).ToString() + " units";
+            RoadwayFloodedToleranceSlider = group.AddSlider("Roadway Flooded Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
+            RoadwayFloodedToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodedTolerance / 100f).ToString() + " units";
+            
 
             UIHelperBase StormWaterSimulationGroup = helper.AddGroup("Stormwater Simulation Settings");
             AutomaticallyPickStormDistributionCheckBox = StormWaterSimulationGroup.AddCheckbox("Automatically Select Storm Distribution", ModSettings.AutomaticStormDistribution, OnAutomaticStormDistributionCheckBoxChanged) as UICheckBox;
@@ -93,6 +120,58 @@ namespace Rainfall
             DifficultySlider.tooltipBox.Show();
             DifficultySlider.RefreshTooltip();
         }
+        private void OnBuildingFloodingToleranceChanged(float val)
+        {
+            if (val < ModSettings.BuildingFloodedTolerance)
+                ModSettings.BuildingFloodingTolerance = (int)val;
+            else
+            {
+                ModSettings.BuildingFloodingTolerance = ModSettings.BuildingFloodedTolerance-ModSettings._floodToleranceStep;
+                BuildingFloodingToleranceSlider.value = ModSettings.BuildingFloodingTolerance;
+            }
+            BuildingFloodingToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodingTolerance / 100f).ToString() + " units";
+            BuildingFloodingToleranceSlider.tooltipBox.Show();
+            BuildingFloodingToleranceSlider.RefreshTooltip();
+        }
+        private void OnBuildingFloodedToleranceChanged(float val)
+        {
+            if (val > ModSettings.BuildingFloodingTolerance)
+                ModSettings.BuildingFloodedTolerance = (int)val;
+            else
+            {
+                ModSettings.BuildingFloodedTolerance = ModSettings.BuildingFloodingTolerance + ModSettings._floodToleranceStep;
+                BuildingFloodedToleranceSlider.value =  ModSettings.BuildingFloodedTolerance;
+            }
+            BuildingFloodedToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodedTolerance / 100f).ToString() + " units";
+            BuildingFloodedToleranceSlider.tooltipBox.Show();
+            BuildingFloodedToleranceSlider.RefreshTooltip();
+        }
+        private void OnRoadwayFloodingToleranceChanged(float val)
+        {
+            if (val < ModSettings.RoadwayFloodedTolerance)
+                ModSettings.RoadwayFloodingTolerance = (int)val;
+            else
+            {
+                ModSettings.RoadwayFloodingTolerance = ModSettings.RoadwayFloodedTolerance - ModSettings._floodToleranceStep;
+                RoadwayFloodingToleranceSlider.value = ModSettings.RoadwayFloodingTolerance;
+            }
+            RoadwayFloodingToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodingTolerance / 100f).ToString() + " units";
+            RoadwayFloodingToleranceSlider.tooltipBox.Show();
+            RoadwayFloodingToleranceSlider.RefreshTooltip();
+        }
+        private void OnRoadwayFloodedToleranceChanged(float val)
+        {
+            if (val > ModSettings.RoadwayFloodingTolerance)
+                ModSettings.RoadwayFloodedTolerance = (int)val;
+            else
+            {
+                ModSettings.RoadwayFloodedTolerance = ModSettings.RoadwayFloodingTolerance + ModSettings._floodToleranceStep;
+                RoadwayFloodedToleranceSlider.value = ModSettings.RoadwayFloodedTolerance;
+            }
+            RoadwayFloodedToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodedTolerance / 100f).ToString() + " units";
+            RoadwayFloodedToleranceSlider.tooltipBox.Show();
+            RoadwayFloodedToleranceSlider.RefreshTooltip();
+        }
         private void OnRefreshRateChanged(float val)
         {
             ModSettings.RefreshRate = (int)val;
@@ -100,13 +179,41 @@ namespace Rainfall
             RefreshRateSlider.tooltipBox.Show();
             RefreshRateSlider.RefreshTooltip();
         }
+
         private void OnChirpForecastCheckBoxChanged(bool val)
         {
             ModSettings.ChirpForecasts = (bool)val;
         }
+        private void OnSimulatePollutionCheckBoxChanged(bool val)
+        {
+            ModSettings.SimulatePollution = (bool)val;
+        }
+        private void OnImprovedInletMechanicsCheckBoxChanged(bool val)
+        {
+            ModSettings.ImprovedInletMechanics = (bool)val;
+        }
+        private void OnPreventRainBeforeMilestoneCheckBoxChanged(bool val)
+        {
+            ModSettings.PreventRainBeforeMilestone = (bool)val;
+        }
+        /*
+        private void OnEasyModeCheckBoxChanged(bool val)
+        {
+            ModSettings.EasyMode = (bool)val;
+        }*/
+        private void OnFreezeLandvaluesCheckBoxChanged(bool val)
+        {
+            ModSettings.FreezeLandvalues = (bool)val;
+        }
+        
         private void OnPreviousStormOptionChanged(int sel)
         {
             ModSettings.PreviousStormOption = (int)sel;
+        }
+
+        private void OnGravityDrainageOptionChanged(int sel)
+        {
+            ModSettings.GravityDrainageOption = (int)sel;
         }
 
         private void OnChirpRainTweetsCheckBoxChanged(bool val)
@@ -143,7 +250,7 @@ namespace Rainfall
         {
             string[] modStormDistributionNames = StormDistributionIO.GetStormDistributionNames();
             string[] fullStormDistributionNames = new string[modStormDistributionNames.Length + 1];
-            fullStormDistributionNames[0] = ModSettings.DefaultStormDistributionName;
+            fullStormDistributionNames[0] = ModSettings.UnmoddedStormDistributionName;
             Array.Copy(modStormDistributionNames, 0, fullStormDistributionNames, 1, modStormDistributionNames.Length);
             return fullStormDistributionNames;
         }
@@ -178,14 +285,14 @@ namespace Rainfall
             try {
                 string[] modCityNames = DepthDurationFrequencyIO.GetCityNames();
                 string[] fullCityNames = new string[modCityNames.Length + 1];
-                fullCityNames[0] = ModSettings.DefaultStormDistributionName;
+                fullCityNames[0] = ModSettings.UnmoddedCityName;
                 Array.Copy(modCityNames, 0, fullCityNames, 1, modCityNames.Length);
                 return fullCityNames;
             } catch (Exception e)
             {
                 Debug.Log("[RF]GetCityNamesDropDownOptions Could not get city names encountered exception " + e);
                 string[] fullCityNames = new string[1];
-                fullCityNames[0] = ModSettings.DefaultStormDistributionName;
+                fullCityNames[0] = ModSettings.UnmoddedCityName;
                 return fullCityNames;
             }
         }
@@ -279,6 +386,11 @@ namespace Rainfall
                 slider.Create(helper);
             }
         }
+        private void OnDistrictControlCheckBoxChanged(bool val)
+        {
+            ModSettings.DistrictControl = (bool)val;
+        }
+
         private void resetAllSettings()
         {
             ModSettings.resetModSettings();
@@ -291,6 +403,16 @@ namespace Rainfall
             MinimumStormDurationSlider.value = ModSettings.MinimumStormDuration;
             MaximumStormDurationSlider.value = ModSettings.MaximumStormDuration;
             MaximumStormIntensitySlider.value = ModSettings.MaximumStormIntensity;
+            DistrictControlCheckBox.isChecked = ModSettings.DistrictControl;
+            BuildingFloodedToleranceSlider.value = ModSettings._defaultBuildingFloodedTolerance;
+            BuildingFloodingToleranceSlider.value = ModSettings._defaultBuildingFloodingTolerance;
+            RoadwayFloodedToleranceSlider.value = ModSettings._defaultRoadwayFloodedTolerance;
+            RoadwayFloodingToleranceSlider.value = ModSettings._defaultRoadwayFloodingTolerance;
+            FreezeLandvaluesCheckBox.isChecked = ModSettings.FreezeLandvalues;
+            ImprovedInletMechanicsCheckBox.isChecked = ModSettings.ImprovedInletMechanics;
+            PreventRainBeforeMilestoneCheckBox.isChecked = ModSettings.PreventRainBeforeMilestone;
+            //EasyModeCheckBox.isChecked = ModSettings.EasyMode;
+            SimulatePollutionCheckBox.isChecked = ModSettings.SimulatePollution;
             foreach (OptionsItemBase sliderOIB in PublicBuildingsRunoffCoefficientSliders)
             {
                 OptionsRunoffCoefficientSlider sliderORCS = sliderOIB as OptionsRunoffCoefficientSlider;

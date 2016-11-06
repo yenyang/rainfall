@@ -15,7 +15,7 @@ namespace Rainfall
         private WeatherManager _weatherManager;
         private WaterSimulation _waterSimulation;
         private TerrainManager _terrainManager;
-        private bool isRaining;
+        public bool isRaining;
         System.Random random = new System.Random();
 
         private HashSet<ushort> _buildingIDs;
@@ -49,6 +49,9 @@ namespace Rainfall
         private const int ChirpRainTweetChance = 1;
         private string forecasterName;
         private string forecasterChannel;
+        public int[] _preRainfallLandvalues;
+        private string rainUnlockMilestone = "Milestone3";
+        private uint waterSourceMaxQuantitiy = 100000000u;
 
         private List<string> mildQuotes;
         private List<string> normalQuotes;
@@ -150,6 +153,7 @@ namespace Rainfall
             {
                 _weatherManager.m_currentRain = 0;
                 _weatherManager.m_targetRain = 0;
+
                 stormTime = 0;
                 improvedSimulation = false;
                 Debug.Log("[RF]Hydrology BeforeTick Storm Ended StormTime > StormDuration");
@@ -230,6 +234,7 @@ namespace Rainfall
                 _waterSources.Clear();
                 _removeBuildingIDs.Clear();
                 _waterSourceIDs = new ushort[_capacity];
+                _preRainfallLandvalues = new int[_capacity];
                 _capacity = _buildingManager.m_buildings.m_buffer.Length;
                 terminated = false;
                 improvedSimulation = false;
@@ -248,7 +253,7 @@ namespace Rainfall
                 for (int i =0; i<_waterSimulation.m_waterSources.m_size-1; i++)
                 {
                     WaterSource ws = _waterSimulation.m_waterSources.m_buffer[i];
-                    if (ws.m_inputRate == 0u && ws.m_type == 2 && ws.m_water <= 200u && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i+1)))
+                    if (ws.m_inputRate == 0u && ws.m_type == 2 && ws.m_water <= waterSourceMaxQuantitiy && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i+1)))
                     {
 
                         previousStormWaterSourceIDs.Add((ushort)(i + 1));
@@ -259,7 +264,7 @@ namespace Rainfall
                     _waterSimulation.ReleaseWaterSource(id);
                 }
 
-                if (ModSettings.CityName != ModSettings.DefaultCityName && ModSettings.StormDistributionName != ModSettings.DefaultStormDistributionName && _weatherManager.m_targetRain > 0 && ModSettings.PreviousStormOption != 0 && ModSettings.PreviousStormOption != 3)
+                if (ModSettings.CityName != ModSettings.UnmoddedCityName && ModSettings.StormDistributionName != ModSettings.UnmoddedStormDistributionName && _weatherManager.m_targetRain > 0 && ModSettings.PreviousStormOption != 0 && ModSettings.PreviousStormOption != 3)
                 {
                     
                     if (_weatherManager.m_currentRain > 0.01)
@@ -312,182 +317,217 @@ namespace Rainfall
                 //Debug.Log("[RF].Hydrology  not raining ");
             }
             else if (_weatherManager.m_currentRain > 0 && isRaining == false && simulationTimeDelta > 0) {
-                currentChunk = 0;
-                finishedChunks = 0;
-                //Debug.Log("[RF].Hydrology MaxRefreshRate = " + ModSettings._maxRefreshRate.ToString());
-                //Debug.Log("[RF].Hydrlogy _BuildingIDChunks.length = " + _buildingIDChunks.Length.ToString());
-               
-                for (int chunks=0; chunks < ModSettings._maxRefreshRate; chunks++)
+                MilestoneInfo unlockMilestone = null;
+                try
                 {
-                    if (_buildingIDChunks[chunks].Count > 0)
+                    if (!Singleton<UnlockManager>.instance.m_allMilestones.TryGetValue(rainUnlockMilestone, out unlockMilestone))
                     {
-                        _buildingIDChunks[chunks].Clear();
-                        //Debug.Log("[RF].Hydrology Clearing chunk " + chunks);
-                    } else
-                    {
-                        //Debug.Log("[RF].Hydrology Chunk " + chunks.ToString() + " was already empty.");
+                        unlockMilestone = null;
                     }
-                    
                 }
-                foreach (ushort id in _buildingIDs)
+                catch
                 {
-                    if (id <= _capacity)
+                    //Debug.Log("Could not read milestone");
+                    unlockMilestone = null;
+                }
+                if (unlockMilestone != null)
+                {
+                    Singleton<UnlockManager>.instance.CheckMilestone(unlockMilestone, false, false);
+                }
+                if (!Singleton<UnlockManager>.instance.Unlocked(unlockMilestone) && ModSettings.PreventRainBeforeMilestone == true)
+                {
+                    _weatherManager.m_currentRain = 0;
+                    _weatherManager.m_targetRain = 0;
+                }
+                else {
+                    currentChunk = 0;
+                    finishedChunks = 0;
+                    //Debug.Log("[RF].Hydrology MaxRefreshRate = " + ModSettings._maxRefreshRate.ToString());
+                    //Debug.Log("[RF].Hydrlogy _BuildingIDChunks.length = " + _buildingIDChunks.Length.ToString());
+
+                    for (int chunks = 0; chunks < ModSettings._maxRefreshRate; chunks++)
                     {
-                        if (calculateFlowRate(id, _weatherManager.m_currentRain) > 0u)
+                        if (_buildingIDChunks[chunks].Count > 0)
                         {
-                            _waterSources.Add(newWaterSourceAtBuidling(id));
-                            //Debug.Log("[RF].Hydrology  Added  Water for building " + id.ToString() + " in _buildingID");
-                        }
-                        _buildingIDChunks[currentChunk].Add(id);
-                        //Debug.Log("[RF].Hydrology Added Building " + id.ToString() + " to chunk " + currentChunk.ToString());
-                        if (currentChunk+1 < ModSettings.RefreshRate)
-                        {
-                            currentChunk++;
+                            _buildingIDChunks[chunks].Clear();
+                            //Debug.Log("[RF].Hydrology Clearing chunk " + chunks);
                         }
                         else
                         {
-                            currentChunk = 0;
+                            //Debug.Log("[RF].Hydrology Chunk " + chunks.ToString() + " was already empty.");
                         }
 
                     }
-
-                }
-                isRaining = true;
-                
-                //Debug.Log("[RF]Hydrology.onUpdate1 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-               
-                
-                if (ModSettings.CityName != ModSettings.DefaultCityName && ModSettings.StormDistributionName != ModSettings.DefaultStormDistributionName && _weatherManager.m_targetRain > 0)
-                {
-                    bool flag = true;
-                    stormDuration = random.Next(ModSettings.MinimumStormDuration, ModSettings.MaximumStormDuration);
-                    stormDuration -= stormDuration % ModSettings._stormTimeStep;
-                    Debug.Log("[RF]Hydrology.OnUpdate1 stormDuration = " + stormDuration.ToString());
-                    cityName = ModSettings.CityName;
-                    //Debug.Log("[RF]Hydrology.OnUpdate1 cityName = " + cityName.ToString());
-                    intensityCurveName = ModSettings.StormDistributionName;
-                    //Debug.Log("[RF]Hydrology.OnUpdate1 intensity curve name = " + intensityCurveName.ToString());
-                    intensityTargetLock = _weatherManager.m_targetRain;
-                    //Debug.Log("[RF]Hydrology.OnUpdate1 intensityTargetLock = " + intensityTargetLock.ToString());
-                    stormDepth = DepthDurationFrequencyIO.GetDepth(cityName, stormDuration, intensityTargetLock);
-                    Debug.Log("[RF]Hydrology.OnUpdate1 storm depth = " + stormDepth.ToString());
-                    SortedList<float, float> initialStormDepthCurve = new SortedList<float, float>();
-                    bool flag1 = StormDistributionIO.GetDepthCurve(intensityCurveName, ref initialStormDepthCurve);
-                    bool flag2 = StormDistributionIO.reviewDepthCurve(initialStormDepthCurve, ModSettings._maxStormDuration);
-                    if (!flag1 || !flag2)
+                    _preRainfallLandvalues = new int[_capacity];
+                    foreach (ushort id in _buildingIDs)
                     {
-                        flag = false;
-                        if (!flag1)
-                            Debug.Log("[RF]Hydrology.OnUpdate Could not find Intensity Curve " + intensityCurveName);
-                        if (!flag2)
-                            Debug.Log("[RF]Hydrology.OnUpdate DepthCurve failed review " + intensityCurveName);
+                        if (id <= _capacity)
+                        {
+                            if (calculateFlowRate(id, _weatherManager.m_currentRain) > 0u/*&& ModSettings.EasyMode == false*/)
+                            {
+                                _waterSources.Add(newWaterSourceAtBuidling(id));
+                                //Debug.Log("[RF].Hydrology  Added  Water for building " + id.ToString() + " in _buildingID");
+                            }
+                            /*else if (ModSettings.EasyMode == true)
+                            {
+                                Debug.Log("[RF].Hydrology New Storm Easy Mode Adding SWA");
+                                Hydraulics.addStormwaterAccumulation(id, calculateFlowRate(id, _weatherManager.m_currentRain));
+                            }*/
+                            _buildingIDChunks[currentChunk].Add(id);
+                            //Debug.Log("[RF].Hydrology Added Building " + id.ToString() + " to chunk " + currentChunk.ToString());
+                            if (currentChunk + 1 < ModSettings.RefreshRate)
+                            {
+                                currentChunk++;
+                            }
+                            else
+                            {
+                                currentChunk = 0;
+                            }
+                            Building currentBuilding = _buildingManager.m_buildings.m_buffer[id];
+                            Singleton<ImmaterialResourceManager>.instance.CheckLocalResource(ImmaterialResourceManager.Resource.LandValue, currentBuilding.m_position, out _preRainfallLandvalues[id]);
+                        }
+
                     }
-                    Debug.Log("[RF]Hydrology.OnUpdate1 flag1 = " + flag1.ToString());
-                    if (flag)
+                    isRaining = true;
+
+                    //Debug.Log("[RF]Hydrology.onUpdate1 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
+
+
+                    if (ModSettings.CityName != ModSettings.UnmoddedCityName && ModSettings.StormDistributionName != ModSettings.UnmoddedStormDistributionName && _weatherManager.m_targetRain > 0)
                     {
-                        StormDistributionIO.logCurve(initialStormDepthCurve, "Initial Storm Depth Curve");
-                        bool flag3;
-                        SortedList<float, float> reducedDepthCurve;
-                        if (stormDuration < ModSettings._maxStormDuration)
-                        {
-                            reducedDepthCurve = new SortedList<float, float>();
-                            flag3 = StormDistributionIO.reduceDuration(stormDuration, initialStormDepthCurve, ref reducedDepthCurve);
-                        } else
-                        {
-                            reducedDepthCurve = initialStormDepthCurve;
-                            flag3 = true;
-                        }
-                        if (flag3)
-                        {
-                            stormDepthCurve = new SortedList<float, float>();
-                            stormDepthCurve = StormDistributionIO.ScaleDepthCurve(reducedDepthCurve, stormDepth);
-                            stormIntensityCurve = StormDistributionIO.GetIntensityCurve(stormDepthCurve);
-                            StormDistributionIO.logCurve(stormDepthCurve, "Storm Depth Curve");
-                            StormDistributionIO.logCurve(stormIntensityCurve, "Storm Intensity Curve");
-                            if (StormDistributionIO.GetMaxValue(stormDepthCurve) <= 0)
-                            {
-                                flag = false;
-                            }
-                            Debug.Log("[RF]Hydrology.OnUpdate1 Starting storm with Depth = " + StormDistributionIO.GetMaxValue(stormDepthCurve).ToString() + " And Max intensity " + StormDistributionIO.GetMaxValue(stormIntensityCurve).ToString());
-                            beforeTickCurrentIntensity = rainStep;
-                            //Debug.Log("[RF]Hydrology.OnUpdate1 beforeTickCurrentIntensity = " + beforeTickCurrentIntensity.ToString());
-
-                            if (!previousStorm)
-                            {
-                                stormTime = (decimal)(simulationTimeDelta * ModSettings.TimeScale);
-                                stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
-                                //Debug.Log("[RF]Hydrology.OnUpdate1 stormIntensityCurveKeyIndex = " + stormIntensityCurveKeyIndex.ToString());
-                            }
-                            else if (ModSettings.PreviousStormOption == 1)
-                            {
-                                stormTime = (decimal)(simulationTimeDelta * ModSettings.TimeScale);
-                                float temporaryIntensity = 0;
-                                stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
-                                decimal stormIntensityCurveKeyIndexDelta = stormIntensityCurveKeyIndex;
-                                while (temporaryIntensity < _weatherManager.m_currentRain && stormTime < (decimal)stormDuration)
-                                {
-                                    int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
-                                    int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
-                                    float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                                    float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-
-                                    float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
-                                    float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
-                                    float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
-                                    temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
-                                    stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);
-                                    stormIntensityCurveKeyIndex += stormIntensityCurveKeyIndexDelta;
-                                }
-                            } else if (ModSettings.PreviousStormOption == 2)
-                            {
-                                stormTime = (decimal)(stormDuration);
-                                float temporaryIntensity = 0f;
-                                decimal stormIntensityCurveKeyIndexDelta = (decimal)(simulationTimeDelta * ModSettings.TimeScale) / (decimal)stormIntensityCurve.Keys[1];
-                                stormIntensityCurveKeyIndex = (decimal)(stormIntensityCurve.Keys.Count-1)- stormIntensityCurveKeyIndexDelta;
-                                while (temporaryIntensity < _weatherManager.m_currentRain && stormTime > 0)
-                                {
-                                    int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
-                                    int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);                               
-                                    float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];                                    
-                                    float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];  
-                                    float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;                                
-                                    float rangeMinimum = stormIntensityCurve[timeRangeMinimum];                                  
-                                    float rangeMaximum = stormIntensityCurve[timeRangeMaximum];                                   
-                                    temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);                                
-                                    stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);                              
-                                    stormIntensityCurveKeyIndex -= stormIntensityCurveKeyIndexDelta;                            
-                                }
-                                if (stormTime < 0)
-                                    flag = false;
-                            }
-                        }
-                        else
+                        bool flag = true;
+                        stormDuration = random.Next(ModSettings.MinimumStormDuration, ModSettings.MaximumStormDuration);
+                        stormDuration -= stormDuration % ModSettings._stormTimeStep;
+                        Debug.Log("[RF]Hydrology.OnUpdate1 stormDuration = " + stormDuration.ToString());
+                        cityName = ModSettings.CityName;
+                        //Debug.Log("[RF]Hydrology.OnUpdate1 cityName = " + cityName.ToString());
+                        intensityCurveName = ModSettings.StormDistributionName;
+                        //Debug.Log("[RF]Hydrology.OnUpdate1 intensity curve name = " + intensityCurveName.ToString());
+                        intensityTargetLock = _weatherManager.m_targetRain;
+                        //Debug.Log("[RF]Hydrology.OnUpdate1 intensityTargetLock = " + intensityTargetLock.ToString());
+                        stormDepth = DepthDurationFrequencyIO.GetDepth(cityName, stormDuration, intensityTargetLock);
+                        Debug.Log("[RF]Hydrology.OnUpdate1 storm depth = " + stormDepth.ToString());
+                        SortedList<float, float> initialStormDepthCurve = new SortedList<float, float>();
+                        bool flag1 = StormDistributionIO.GetDepthCurve(intensityCurveName, ref initialStormDepthCurve);
+                        bool flag2 = StormDistributionIO.reviewDepthCurve(initialStormDepthCurve, ModSettings._maxStormDuration);
+                        if (!flag1 || !flag2)
                         {
                             flag = false;
-                            Debug.Log("[RF]Hydrology.OnUpdate1 could not reduce depth curve duration");
+                            if (!flag1)
+                                Debug.Log("[RF]Hydrology.OnUpdate Could not find Intensity Curve " + intensityCurveName);
+                            if (!flag2)
+                                Debug.Log("[RF]Hydrology.OnUpdate DepthCurve failed review " + intensityCurveName);
                         }
+                        Debug.Log("[RF]Hydrology.OnUpdate1 flag1 = " + flag1.ToString());
                         if (flag)
                         {
-                            improvedSimulation = true;
-                        } else
-                        {
-                            improvedSimulation = false;
+                            StormDistributionIO.logCurve(initialStormDepthCurve, "Initial Storm Depth Curve");
+                            bool flag3;
+                            SortedList<float, float> reducedDepthCurve;
+                            if (stormDuration < ModSettings._maxStormDuration)
+                            {
+                                reducedDepthCurve = new SortedList<float, float>();
+                                flag3 = StormDistributionIO.reduceDuration(stormDuration, initialStormDepthCurve, ref reducedDepthCurve);
+                            }
+                            else
+                            {
+                                reducedDepthCurve = initialStormDepthCurve;
+                                flag3 = true;
+                            }
+                            if (flag3)
+                            {
+                                stormDepthCurve = new SortedList<float, float>();
+                                stormDepthCurve = StormDistributionIO.ScaleDepthCurve(reducedDepthCurve, stormDepth);
+                                stormIntensityCurve = StormDistributionIO.GetIntensityCurve(stormDepthCurve);
+                                StormDistributionIO.logCurve(stormDepthCurve, "Storm Depth Curve");
+                                StormDistributionIO.logCurve(stormIntensityCurve, "Storm Intensity Curve");
+                                if (StormDistributionIO.GetMaxValue(stormDepthCurve) <= 0)
+                                {
+                                    flag = false;
+                                }
+                                Debug.Log("[RF]Hydrology.OnUpdate1 Starting storm with Depth = " + StormDistributionIO.GetMaxValue(stormDepthCurve).ToString() + " And Max intensity " + StormDistributionIO.GetMaxValue(stormIntensityCurve).ToString());
+                                beforeTickCurrentIntensity = rainStep;
+                                //Debug.Log("[RF]Hydrology.OnUpdate1 beforeTickCurrentIntensity = " + beforeTickCurrentIntensity.ToString());
+
+                                if (!previousStorm)
+                                {
+                                    stormTime = (decimal)(simulationTimeDelta * ModSettings.TimeScale);
+                                    stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
+                                    //Debug.Log("[RF]Hydrology.OnUpdate1 stormIntensityCurveKeyIndex = " + stormIntensityCurveKeyIndex.ToString());
+                                }
+                                else if (ModSettings.PreviousStormOption == 1)
+                                {
+                                    stormTime = (decimal)(simulationTimeDelta * ModSettings.TimeScale);
+                                    float temporaryIntensity = 0;
+                                    stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
+                                    decimal stormIntensityCurveKeyIndexDelta = stormIntensityCurveKeyIndex;
+                                    while (temporaryIntensity < _weatherManager.m_currentRain && stormTime < (decimal)stormDuration)
+                                    {
+                                        int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
+                                        int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
+                                        float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
+                                        float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
+
+                                        float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
+                                        float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
+                                        float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
+                                        temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
+                                        stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);
+                                        stormIntensityCurveKeyIndex += stormIntensityCurveKeyIndexDelta;
+                                    }
+                                }
+                                else if (ModSettings.PreviousStormOption == 2)
+                                {
+                                    stormTime = (decimal)(stormDuration);
+                                    float temporaryIntensity = 0f;
+                                    decimal stormIntensityCurveKeyIndexDelta = (decimal)(simulationTimeDelta * ModSettings.TimeScale) / (decimal)stormIntensityCurve.Keys[1];
+                                    stormIntensityCurveKeyIndex = (decimal)(stormIntensityCurve.Keys.Count - 1) - stormIntensityCurveKeyIndexDelta;
+                                    while (temporaryIntensity < _weatherManager.m_currentRain && stormTime > 0)
+                                    {
+                                        int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
+                                        int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
+                                        float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
+                                        float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
+                                        float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
+                                        float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
+                                        float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
+                                        temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
+                                        stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);
+                                        stormIntensityCurveKeyIndex -= stormIntensityCurveKeyIndexDelta;
+                                    }
+                                    if (stormTime < 0)
+                                        flag = false;
+                                }
+                            }
+                            else
+                            {
+                                flag = false;
+                                Debug.Log("[RF]Hydrology.OnUpdate1 could not reduce depth curve duration");
+                            }
+                            if (flag)
+                            {
+                                improvedSimulation = true;
+                            }
+                            else
+                            {
+                                improvedSimulation = false;
+                            }
+                            //Debug.Log("[RF]Hydrology.OnUpdate1 simulationTimeDelta = " + simulationTimeDelta.ToString());
+                            // Debug.Log("[RF]Hydrology.OnUpdate1 timeScale = " + ModSettings.TimeScale.ToString());
+                            //Debug.Log("[RF]Hydrology.OnUpdate1 (simulationTimeDelta * ModSettings.TimeScale) = " + (simulationTimeDelta * ModSettings.TimeScale).ToString());
+
                         }
-                        //Debug.Log("[RF]Hydrology.OnUpdate1 simulationTimeDelta = " + simulationTimeDelta.ToString());
-                        // Debug.Log("[RF]Hydrology.OnUpdate1 timeScale = " + ModSettings.TimeScale.ToString());
-                        //Debug.Log("[RF]Hydrology.OnUpdate1 (simulationTimeDelta * ModSettings.TimeScale) = " + (simulationTimeDelta * ModSettings.TimeScale).ToString());
+
+                        else
+                        {
+                            Debug.Log("[RF]Hydrology.OnUpdate1 finished before it started");
+                        }
 
                     }
-                    
-                    else
+                    if (ModSettings.ChirpForecasts == true && improvedSimulation == true)
                     {
-                        Debug.Log("[RF]Hydrology.OnUpdate1 finished before it started");
+                        ChirpForecast.SendMessage(forecasterName, generateRainFallForecast());
                     }
-
-                }
-                if (ModSettings.ChirpForecasts == true && improvedSimulation == true)
-                {
-                    ChirpForecast.SendMessage(forecasterName, generateRainFallForecast());
                 }
                 // Debug.Log("[RF].Hydrology  Started to Rain with int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
             }
@@ -546,16 +586,27 @@ namespace Rainfall
                             //Debug.Log("[RF].Hydrology  wsID.len = " + _waterSourceIDs.Length + " id is " + id);
                             if (id <= _capacity && simulationTimeDelta > 0 && _buildingIDs.Contains(id))
                             {
-                                if (_waterSourceIDs[id] != 0)
+                                if (_waterSourceIDs[id] != 0 /*&& ModSettings.EasyMode == false*/)
                                 {
                                     WaterSource currentSource = _waterSimulation.LockWaterSource(_waterSourceIDs[id]);
+                                    Building currentBuilding = _buildingManager.m_buildings.m_buffer[id];
+                                    BuildingAI currentBuildingAI = currentBuilding.Info.m_buildingAI;
                                     //Debug.Log("[RF].Hydrology  " + id.ToString() + " building has flow " + currentSource.m_flow);
                                     if (flowRate > 0u)
                                     {
                                         currentSource.m_outputRate = flowRate;
                                         currentSource.m_flow = flowRate;
-                                        currentSource.m_water = 200u;
-                                        //currentSource.m_pollution += (uint)calculatePolution(id, _weatherManager.m_currentRain);
+                                        currentSource.m_water = waterSourceMaxQuantitiy;
+                                        int buildingPollutionAccumulation;
+                                        int buildingNoiseAccumulation;
+                                        currentBuildingAI.GetPollutionAccumulation(out buildingPollutionAccumulation, out buildingNoiseAccumulation);
+                                        if (buildingPollutionAccumulation > 0 && ModSettings.SimulatePollution)
+                                        {
+                                            //Debug.Log("[RF]Hydrology.Update building " + id + " pollution accumulation = " + buildingPollutionAccumulation.ToString());
+                                            currentSource.m_pollution = (uint)Mathf.Max((float)currentSource.m_water, (float)currentSource.m_water * ((float)buildingPollutionAccumulation / 100f));
+
+                                        }
+                                        //currentSource.m_pollution += (uint)calculatePollution(id, _weatherManager.m_currentRain);
                                         //Debug.Log("[RF].Hydrology  water source at building " + id.ToString() + " water is " + currentSource.m_water.ToString());
                                     }
                                     /*
@@ -572,10 +623,14 @@ namespace Rainfall
                                         removeWaterSourceAtBuilding(id);
                                     }
                                 }
-                                else if (flowRate > 0u)
+                                else if (flowRate > 0u /*&& ModSettings.EasyMode == false*/)
                                 {
                                     _waterSources.Add(newWaterSourceAtBuidling(id));
                                     //Debug.Log("[RF].Hydrology  Added Water for building " + id.ToString());
+                                } else if (flowRate > 0u)
+                                {
+                                    Debug.Log("[RF].Hydrology Raining Easy Mode Adding SWA");
+                                    Hydraulics.addStormwaterAccumulation(id, calculateFlowRate(id, flowRate));
                                 }
                             }
                             else if (simulationTimeDelta > 0)
@@ -689,6 +744,7 @@ namespace Rainfall
                     }
                 }
                 isRaining = false;
+                _preRainfallLandvalues = new int[_capacity];
                //Debug.Log("[RF].Hydrology  No longer Raining. int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
             }
 
@@ -727,42 +783,72 @@ namespace Rainfall
 
         public WaterSource newWaterSourceAtBuidling(ushort id)
         {
+
             WaterSource surfaceflow = default(WaterSource);
+            /*if (ModSettings.EasyMode == true)
+            {
+                Debug.Log("[RF] newWaterSourceAtBuilding EasyMode returning SurfaceFlow ");
+                return surfaceflow;
+            }*/
+
             uint flowRate = (uint)calculateFlowRate(id, _weatherManager.m_currentRain);
-            
+
             surfaceflow.m_flow = flowRate;
             surfaceflow.m_inputRate = 0u;
             surfaceflow.m_outputRate = flowRate;
-            
+
             surfaceflow.m_outputPosition = _buildingManager.m_buildings.m_buffer[id].CalculateSidewalkPosition();
-            Vector3 buildingPosition = this._buildingManager.m_buildings.m_buffer[id].m_position;
-            Vector3 sidewalkPosition = this._buildingManager.m_buildings.m_buffer[id].CalculateSidewalkPosition();
-            Vector3 SidewalkSetback = buildingPosition - sidewalkPosition;
-            float distanceFromSidewalk = 8f;
-            float scaleValue = (SidewalkSetback.magnitude + distanceFromSidewalk) / SidewalkSetback.magnitude;
-            Vector3 Scaler = new Vector3(scaleValue, scaleValue, scaleValue);
-            Vector3 StreetSetback = Vector3.Scale(SidewalkSetback, Scaler);
-            Vector3 StreetPosition = buildingPosition - StreetSetback;
-            //Debug.Log("old height " + StreetPosition.y.ToString());
-            //StreetPosition.y = _terrainManager.Calc(StreetPosition.x, StreetPosition.y);
-            int miny;
-            int avgy;
-            int maxy;
-            _terrainManager.CalculateAreaHeight(StreetPosition.x, StreetPosition.z, StreetPosition.x, StreetPosition.z, out miny, out avgy, out maxy);
-            float avgyf = (float)avgy / 64f;
-            //Debug.Log("Miny " + minyf.ToString() + " avgy " + avgyf.ToString() + " maxy " + maxyf.ToString());
-            StreetPosition.y = avgyf;
-            surfaceflow.m_inputPosition = StreetPosition;
-            surfaceflow.m_outputPosition = StreetPosition;
-            ushort target = (ushort)(StreetPosition.y + 1);
+            Building currentBuilding = this._buildingManager.m_buildings.m_buffer[id];
+            BuildingAI currentBuildingAI = currentBuilding.Info.m_buildingAI;
+            if (currentBuildingAI is NaturalDrainageAI)
+            {
+                Vector3 drainageAreaPosition = currentBuilding.m_position;
+                int miny;
+                int avgy;
+                int maxy;
+                _terrainManager.CalculateAreaHeight(drainageAreaPosition.x - currentBuilding.Width / 2, drainageAreaPosition.z + currentBuilding.Length / 2, drainageAreaPosition.x + currentBuilding.Width / 2, drainageAreaPosition.z + currentBuilding.Length / 2, out miny, out avgy, out maxy);
+                surfaceflow.m_inputPosition = new Vector3(drainageAreaPosition.x, maxy, drainageAreaPosition.z);
+                surfaceflow.m_outputPosition = surfaceflow.m_inputPosition;
+            } else {
+                Vector3 buildingPosition = currentBuilding.m_position;
+                Vector3 sidewalkPosition = currentBuilding.CalculateSidewalkPosition();
+                Vector3 SidewalkSetback = buildingPosition - sidewalkPosition;
+                float distanceFromSidewalk = 8f;
+                float scaleValue = (SidewalkSetback.magnitude + distanceFromSidewalk) / SidewalkSetback.magnitude;
+                Vector3 Scaler = new Vector3(scaleValue, scaleValue, scaleValue);
+                Vector3 StreetSetback = Vector3.Scale(SidewalkSetback, Scaler);
+                Vector3 StreetPosition = buildingPosition - StreetSetback;
+                //Debug.Log("old height " + StreetPosition.y.ToString());
+                //StreetPosition.y = _terrainManager.Calc(StreetPosition.x, StreetPosition.y);
+                int miny;
+                int avgy;
+                int maxy;
+                _terrainManager.CalculateAreaHeight(StreetPosition.x, StreetPosition.z, StreetPosition.x, StreetPosition.z, out miny, out avgy, out maxy);
+                float avgyf = (float)avgy / 64f;
+                //Debug.Log("Miny " + minyf.ToString() + " avgy " + avgyf.ToString() + " maxy " + maxyf.ToString());
+                StreetPosition.y = avgyf;
+                surfaceflow.m_inputPosition = StreetPosition;
+                surfaceflow.m_outputPosition = StreetPosition;
+            }
+            ushort target = (ushort)(surfaceflow.m_outputPosition.y + 25);
             target = (ushort)Mathf.Clamp(target, 0, 65535);
+            
             
             //Debug.Log("[STORM DRAINS] Building" + id.ToString() + " pos is " + buildingPosition.ToString());
            // Debug.Log("[STORM DRAINS] Building " + id.ToString() + " sidewalk pos is " + sidewalkPosition.ToString());
             //Debug.Log("[STORM DRAINS] Building " + id.ToString() + " street pos is " + StreetPosition.ToString());
             surfaceflow.m_type = 2;
             surfaceflow.m_target = target;
-            surfaceflow.m_water = 200u;
+            surfaceflow.m_water = waterSourceMaxQuantitiy;
+            int buildingPollutionAccumulation;
+            int buildingNoiseAccumulation;
+            currentBuildingAI.GetPollutionAccumulation(out buildingPollutionAccumulation, out buildingNoiseAccumulation);
+            if (buildingPollutionAccumulation > 0 && ModSettings.SimulatePollution)
+            {
+                //Debug.Log("[RF]Hydrology.Update building " + id + " pollution accumulation = " + buildingPollutionAccumulation.ToString());
+                surfaceflow.m_pollution = (uint)Mathf.Max((float)surfaceflow.m_water, (float)surfaceflow.m_water * ((float)buildingPollutionAccumulation / 100f));
+
+            }
             ushort num;
             _waterSimulation.CreateWaterSource(out num, surfaceflow);
             _waterSourceIDs[id] = num;
@@ -807,6 +893,12 @@ namespace Rainfall
                     runoffCoefficient = 0.0f;
                 else if (ai is StormDrainAI)
                     runoffCoefficient = 0.0f;
+                else if (ai is NaturalDrainageAI)
+                {
+                    NaturalDrainageAI naturalDrainage = ai as NaturalDrainageAI;
+                    runoffCoefficient = ModSettings.PublicBuildingsRunoffCoefficients["NaturalDrainageAI"].Coefficient * naturalDrainage.m_naturalDrainageMultiplier;
+                }
+
                 else if (ai is WaterFacilityAI)
                     runoffCoefficient = 0.0f;
                 else if (ai is DepotAI)
@@ -868,9 +960,14 @@ namespace Rainfall
                 return false;
             }
             BuildingAI ai = _buildingManager.m_buildings.m_buffer[id].Info.m_buildingAI;
-            if (ai is WaterFacilityAI || ai is StormDrainAI || ai is WindTurbineAI || ai is WildlifeSpawnPointAI || ai is AnimalMonumentAI || ai is PowerPoleAI || ai is DecorationBuildingAI) {
+            if (ai is WaterFacilityAI || ai is WindTurbineAI || ai is WildlifeSpawnPointAI || ai is AnimalMonumentAI || ai is PowerPoleAI || ai is DecorationBuildingAI) {
                // Debug.Log("[RF].Hydrology  Failed AI Test: " + ai.ToString());
                 return false;
+            }
+            if (ai is StormDrainAI)
+            {
+               
+                    return false;
             }
             return true;
         }
@@ -1106,6 +1203,10 @@ namespace Rainfall
             if (((int)time / 60) > 0)
                 return (hour + " hr. and " + min + " min.");
             return (min + " min.");
+        }
+        public static HashSet<ushort> getBuildingList()
+        {
+            return Hydrology.instance._buildingIDs;
         }
     }
 }
