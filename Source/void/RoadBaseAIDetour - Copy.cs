@@ -1,4 +1,4 @@
-﻿using Rainfall.Redirection.Attributes;
+﻿using Rainfall.Redirection;
 using ColossalFramework;
 using ColossalFramework.Math;
 using System;
@@ -9,42 +9,39 @@ namespace Rainfall
 {
 
     [TargetType(typeof(RoadBaseAI))]
-    public class RoadBaseAIDetour : RoadBaseAI
+    public class RoadBaseAIDetour:RoadBaseAI
     {
         [RedirectMethod]
         public override void SimulationStep(ushort segmentID, ref NetSegment data)
         {
-            //Start PlayerNEtAI.SimulationStep
-
-            if (this.HasMaintenanceCost(segmentID, ref data))
+            if ((data.m_flags & NetSegment.Flags.Original) == NetSegment.Flags.None)
             {
-                NetManager playerNetAIinstance = Singleton<NetManager>.instance;
-                Vector3 playerNetAIposition = playerNetAIinstance.m_nodes.m_buffer[(int)data.m_startNode].m_position;
-                Vector3 playerNetAIposition2 = playerNetAIinstance.m_nodes.m_buffer[(int)data.m_endNode].m_position;
-                int playerNetAInum = this.GetMaintenanceCost(playerNetAIposition, playerNetAIposition2);
-                bool playerNetAIflag = (ulong)(Singleton<SimulationManager>.instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15));
-                if (playerNetAInum != 0)
+                NetManager netManager = Singleton<NetManager>.instance;
+                Vector3 pos = netManager.m_nodes.m_buffer[(int)data.m_startNode].m_position;
+                Vector3 pos2 = netManager.m_nodes.m_buffer[(int)data.m_endNode].m_position;
+                int n = this.GetMaintenanceCost(pos, pos2);
+                bool f = (ulong)(Singleton<SimulationManager>.instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15));
+                if (n != 0)
                 {
-                    if (playerNetAIflag)
+                    if (f)
                     {
-                        playerNetAInum = playerNetAInum * 16 / 100 - playerNetAInum / 100 * 15;
+                        n = n * 16 / 100 - n / 100 * 15;
                     }
-                    else
-                    {
-                        playerNetAInum /= 100;
+                    else {
+                        n /= 100;
                     }
-                    Singleton<EconomyManager>.instance.FetchResource(EconomyManager.Resource.Maintenance, playerNetAInum, this.m_info.m_class);
+                    Singleton<EconomyManager>.instance.FetchResource(EconomyManager.Resource.Maintenance, n, this.m_info.m_class);
                 }
-                if (playerNetAIflag)
+                if (f)
                 {
-                    float playerNetAInum2 = (float)playerNetAIinstance.m_nodes.m_buffer[(int)data.m_startNode].m_elevation;
-                    float playerNetAInum3 = (float)playerNetAIinstance.m_nodes.m_buffer[(int)data.m_endNode].m_elevation;
+                    float n2 = (float)netManager.m_nodes.m_buffer[(int)data.m_startNode].m_elevation;
+                    float n3 = (float)netManager.m_nodes.m_buffer[(int)data.m_endNode].m_elevation;
                     if (this.IsUnderground())
                     {
-                        playerNetAInum2 = -playerNetAInum2;
-                        playerNetAInum3 = -playerNetAInum3;
+                        n2 = -n2;
+                        n3 = -n3;
                     }
-                    int constructionCost = this.GetConstructionCost(playerNetAIposition, playerNetAIposition2, playerNetAInum2, playerNetAInum3);
+                    int constructionCost = this.GetConstructionCost(pos, pos2, n2, n3);
                     if (constructionCost != 0)
                     {
                         StatisticBase statisticBase = Singleton<StatisticsManager>.instance.Acquire<StatisticInt64>(StatisticType.CityValue);
@@ -55,16 +52,10 @@ namespace Rainfall
                     }
                 }
             }
-            //End  PlayerNEtAI.SimulationStep
-
 
             SimulationManager instance = Singleton<SimulationManager>.instance;
             NetManager instance2 = Singleton<NetManager>.instance;
             Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood | Notification.Problem.Snow);
-            if ((data.m_flags & NetSegment.Flags.AccessFailed) != NetSegment.Flags.None && Singleton<SimulationManager>.instance.m_randomizer.Int32(16u) == 0)
-            {
-                data.m_flags &= ~NetSegment.Flags.AccessFailed;
-            }
             float num = 0f;
             uint num2 = data.m_lanes;
             int num3 = 0;
@@ -87,8 +78,7 @@ namespace Rainfall
                     data.m_modifiedIndex = instance.m_currentBuildIndex++;
                 }
             }
-            else
-            {
+            else {
                 data.m_flags &= ~NetSegment.Flags.Blocked;
                 int num5 = Mathf.RoundToInt(num) << 4;
                 if (num5 != 0)
@@ -109,15 +99,14 @@ namespace Rainfall
             Vector3 position2 = instance2.m_nodes.m_buffer[(int)data.m_endNode].m_position;
             Vector3 vector = (position + position2) * 0.5f;
             bool flag = false;
-            if ((this.m_info.m_setVehicleFlags & Vehicle.Flags.Underground) == (Vehicle.Flags)0)
+            if ((this.m_info.m_setVehicleFlags & Vehicle.Flags.Underground) == 0)
             {
                 float num6 = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(vector));
                 // NON-STOCK CODE START
-                if (num6 > vector.y + (float)ModSettings.RoadwayFloodedTolerance / 100)
+                if (num6 > vector.y + (float)ModSettings.RoadwayFloodedTolerance/100)
                 {
                     flag = true;
                     data.m_flags |= NetSegment.Flags.Flooded;
-                    //Debug.Log("[RF] Successfully detoured roadway flooded tolerance");
                     problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
                     Vector3 min = data.m_bounds.min;
                     Vector3 max = data.m_bounds.max;
@@ -126,17 +115,16 @@ namespace Rainfall
 
                 else {
                     data.m_flags &= ~NetSegment.Flags.Flooded;
-
+                   
                     // Rainfall compatibility
-                    float add = (float)ModSettings.RoadwayFloodingTolerance / 100;
-                    //Debug.Log("[RF] Successfully detoured roadway flooding tolerance");
+                    float add = (float)ModSettings.RoadwayFloodingTolerance/100; 
+                 
                     if (num6 > vector.y + add)
                     {
                         flag = true;
                         problem = Notification.AddProblems(problem, Notification.Problem.Flood);
                     }
                 }
-                //Debug.Log("[RF] Successfully detoured roadway flooding tolerance: not flooding");
                 // NON-STOCK CODE END
             }
             DistrictManager instance3 = Singleton<DistrictManager>.instance;
@@ -145,17 +133,8 @@ namespace Rainfall
             int num7 = (int)(100 - (data.m_trafficDensity - 100) * (data.m_trafficDensity - 100) / 100);
             if ((this.m_info.m_vehicleTypes & VehicleInfo.VehicleType.Car) != VehicleInfo.VehicleType.None)
             {
-                if ((this.m_info.m_setVehicleFlags & Vehicle.Flags.Underground) == (Vehicle.Flags)0)
+                if ((this.m_info.m_setVehicleFlags & Vehicle.Flags.Underground) == 0)
                 {
-                    if (flag && (data.m_flags & (NetSegment.Flags.AccessFailed | NetSegment.Flags.Blocked)) == NetSegment.Flags.None && instance.m_randomizer.Int32(10u) == 0)
-                    {
-                        TransferManager.TransferOffer offer = default(TransferManager.TransferOffer);
-                        offer.Priority = 4;
-                        offer.NetSegment = segmentID;
-                        offer.Position = vector;
-                        offer.Amount = 1;
-                        Singleton<TransferManager>.instance.AddOutgoingOffer(TransferManager.TransferReason.FloodWater, offer);
-                    }
                     int num8 = (int)data.m_wetness;
                     if (!instance2.m_treatWetAsSnow)
                     {
@@ -163,8 +142,7 @@ namespace Rainfall
                         {
                             num8 = 255;
                         }
-                        else
-                        {
+                        else {
                             int num9 = -(num8 + 63 >> 5);
                             float num10 = Singleton<WeatherManager>.instance.SampleRainIntensity(vector, false);
                             if (num10 != 0f)
@@ -181,8 +159,7 @@ namespace Rainfall
                         {
                             num8 = 128;
                         }
-                        else
-                        {
+                        else {
                             float num12 = Singleton<WeatherManager>.instance.SampleRainIntensity(vector, false);
                             if (num12 != 0f)
                             {
@@ -192,8 +169,7 @@ namespace Rainfall
                                 {
                                     num8 = Mathf.Min(num8 + num14, 255);
                                 }
-                                else
-                                {
+                                else {
                                     num8 = Mathf.Min(num8 + num14, 128);
                                 }
                             }
@@ -201,22 +177,22 @@ namespace Rainfall
                             {
                                 num8 = Mathf.Max(num8 - 1, 0);
                             }
-                            if (num8 >= 64 && (data.m_flags & (NetSegment.Flags.AccessFailed | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded)) == NetSegment.Flags.None && instance.m_randomizer.Int32(10u) == 0)
+                            if (num8 >= 64 && (data.m_flags & (NetSegment.Flags.Blocked | NetSegment.Flags.Flooded)) == NetSegment.Flags.None && instance.m_randomizer.Int32(10u) == 0)
                             {
-                                TransferManager.TransferOffer offer2 = default(TransferManager.TransferOffer);
-                                offer2.Priority = num8 / 50;
-                                offer2.NetSegment = segmentID;
-                                offer2.Position = vector;
-                                offer2.Amount = 1;
-                                Singleton<TransferManager>.instance.AddOutgoingOffer(TransferManager.TransferReason.Snow, offer2);
+                                TransferManager.TransferOffer offer = default(TransferManager.TransferOffer);
+                                offer.Priority = num8 / 50;
+                                offer.NetSegment = segmentID;
+                                offer.Position = vector;
+                                offer.Amount = 1;
+                                Singleton<TransferManager>.instance.AddOutgoingOffer(TransferManager.TransferReason.Snow, offer);
                             }
                             if (num8 >= 192)
                             {
                                 problem = Notification.AddProblems(problem, Notification.Problem.Snow);
                             }
-                            District[] expr_5B7_cp_0_cp_0 = instance3.m_districts.m_buffer;
-                            byte expr_5B7_cp_0_cp_1 = district;
-                            expr_5B7_cp_0_cp_0[(int)expr_5B7_cp_0_cp_1].m_productionData.m_tempSnowCover = expr_5B7_cp_0_cp_0[(int)expr_5B7_cp_0_cp_1].m_productionData.m_tempSnowCover + (uint)num8;
+                            District[] expr_4E2_cp_0_cp_0 = instance3.m_districts.m_buffer;
+                            byte expr_4E2_cp_0_cp_1 = district;
+                            expr_4E2_cp_0_cp_0[(int)expr_4E2_cp_0_cp_1].m_productionData.m_tempSnowCover = expr_4E2_cp_0_cp_0[(int)expr_4E2_cp_0_cp_1].m_productionData.m_tempSnowCover + (uint)num8;
                         }
                     }
                     if (num8 != (int)data.m_wetness)
@@ -232,8 +208,7 @@ namespace Rainfall
                             empty.NetNode = data.m_endNode;
                             instance2.AddSmoothColor(empty);
                         }
-                        else
-                        {
+                        else {
                             data.m_wetness = (byte)num8;
                             instance2.m_wetnessChanged = 256;
                         }
@@ -245,22 +220,21 @@ namespace Rainfall
                     num7 = num7 * 3 + 1 >> 1;
                     num15 = Mathf.Min(700, (int)(50 + data.m_trafficDensity * 6));
                 }
-                else
-                {
+                else {
                     num15 = Mathf.Min(500, (int)(50 + data.m_trafficDensity * 4));
                 }
                 if (!this.m_highwayRules)
                 {
                     int num16 = instance.m_randomizer.Int32(num15, num15 + 99) / 100;
                     data.m_condition = (byte)Mathf.Max((int)data.m_condition - num16, 0);
-                    if (data.m_condition < 192 && (data.m_flags & (NetSegment.Flags.AccessFailed | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded)) == NetSegment.Flags.None && instance.m_randomizer.Int32(20u) == 0)
+                    if (data.m_condition < 192 && (data.m_flags & (NetSegment.Flags.Blocked | NetSegment.Flags.Flooded)) == NetSegment.Flags.None && instance.m_randomizer.Int32(20u) == 0)
                     {
-                        TransferManager.TransferOffer offer3 = default(TransferManager.TransferOffer);
-                        offer3.Priority = (int)((255 - data.m_condition) / 50);
-                        offer3.NetSegment = segmentID;
-                        offer3.Position = vector;
-                        offer3.Amount = 1;
-                        Singleton<TransferManager>.instance.AddIncomingOffer(TransferManager.TransferReason.RoadMaintenance, offer3);
+                        TransferManager.TransferOffer offer2 = default(TransferManager.TransferOffer);
+                        offer2.Priority = (int)((255 - data.m_condition) / 50);
+                        offer2.NetSegment = segmentID;
+                        offer2.Position = vector;
+                        offer2.Amount = 1;
+                        Singleton<TransferManager>.instance.AddIncomingOffer(TransferManager.TransferReason.RoadMaintenance, offer2);
                     }
                 }
             }
@@ -270,24 +244,21 @@ namespace Rainfall
                 {
                     data.m_flags |= NetSegment.Flags.HeavyBan;
                 }
-                else
-                {
+                else {
                     data.m_flags &= ~NetSegment.Flags.HeavyBan;
                 }
                 if ((cityPlanningPolicies & DistrictPolicies.CityPlanning.BikeBan) != DistrictPolicies.CityPlanning.None)
                 {
                     data.m_flags |= NetSegment.Flags.BikeBan;
                 }
-                else
-                {
+                else {
                     data.m_flags &= ~NetSegment.Flags.BikeBan;
                 }
                 if ((cityPlanningPolicies & DistrictPolicies.CityPlanning.OldTown) != DistrictPolicies.CityPlanning.None)
                 {
                     data.m_flags |= NetSegment.Flags.CarBan;
                 }
-                else
-                {
+                else {
                     data.m_flags &= ~NetSegment.Flags.CarBan;
                 }
             }
@@ -310,23 +281,8 @@ namespace Rainfall
                     Singleton<NetManager>.instance.m_shortRoadTraffic.Activate(properties.m_shortRoadTraffic, segmentID);
                 }
             }
-            if ((data.m_flags & NetSegment.Flags.Collapsed) != NetSegment.Flags.None)
-            {
-                GuideController properties2 = Singleton<GuideManager>.instance.m_properties;
-                if (properties2 != null)
-                {
-                    Singleton<NetManager>.instance.m_roadDestroyed.Activate(properties2.m_roadDestroyed, segmentID);
-                    Singleton<NetManager>.instance.m_roadDestroyed2.Activate(properties2.m_roadDestroyed2, this.m_info.m_class.m_service);
-                }
-                if ((ulong)(instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15)))
-                {
-                    int delta = Mathf.RoundToInt(data.m_averageLength);
-                    StatisticBase statisticBase = Singleton<StatisticsManager>.instance.Acquire<StatisticInt32>(StatisticType.DestroyedLength);
-                    statisticBase.Add(delta);
-                }
-            }
             data.m_problems = problem;
-
         }
+
     }
 }

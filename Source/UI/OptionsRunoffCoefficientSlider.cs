@@ -22,6 +22,7 @@ namespace Rainfall.UI
             slider = helper.AddSlider(readableName, min, max, step, value, IgnoredFunction) as UISlider;
             slider.enabled = enabled;
             slider.name = uniqueName;
+            slider.width += 100;
             slider.tooltip = value.ToString();
             slider.eventValueChanged += new PropertyChangedEventHandler<float>(delegate (UIComponent component, float newValue)
             {

@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using ICities;
-using ColossalFramework;
+using Rainfall.Redirection.Attributes;
 
 namespace Rainfall.Redirection
 {
@@ -51,7 +50,11 @@ namespace Rainfall.Redirection
             var customAttributes = type.GetCustomAttributes(typeof(TargetTypeAttribute), false);
             if (customAttributes.Length != 1)
             {
-                return null;
+                throw new Exception($"No target type specified for {type.FullName}!");
+            }
+            if (!GetRedirectedMethods<RedirectMethodAttribute>(type).Any() && !GetRedirectedMethods<RedirectReverseAttribute>(type).Any())
+            {
+                throw new Exception($"No redirects specified for {type.FullName}!");
             }
             var targetType = ((TargetTypeAttribute)customAttributes[0]).Type;
             RedirectMethods(type, targetType, redirects, onCreated);
@@ -59,81 +62,39 @@ namespace Rainfall.Redirection
             return redirects;
         }
 
-        private static bool determineTMPEisLoaded()
-        {
-            bool TMPEisLoaded = false;
-
-            var loadingWrapperLoadingExtensionsField = typeof(LoadingWrapper).GetField("m_LoadingExtensions", BindingFlags.NonPublic | BindingFlags.Instance);
-            List<ILoadingExtension> loadingExtensions = null;
-            if (loadingWrapperLoadingExtensionsField != null)
-            {
-                loadingExtensions = (List<ILoadingExtension>)loadingWrapperLoadingExtensionsField.GetValue(Singleton<LoadingManager>.instance.m_LoadingWrapper);
-            }
-            else {
-                throw new Exception("Could not get loading extensions field");
-            }
-
-            if (loadingExtensions != null)
-            {
-                foreach (ILoadingExtension extension in loadingExtensions)
-                {
-                    if (extension.GetType().Namespace == null)
-                        continue;
-
-                    var namespaceStr = extension.GetType().Namespace.ToString();
-                    if ("TrafficManager".Equals(namespaceStr))
-                    {
-                        TMPEisLoaded = true;
-                        break;
-                    }
-                }
-            }
-            else {
-                throw new Exception("Could not get loading extensions");
-            }
-
-            return TMPEisLoaded;
-        }
-
         private static void RedirectMethods(Type type, Type targetType, Dictionary<MethodInfo, RedirectCallsState> redirects, bool onCreated)
         {
-            foreach (
-                var method in
-                    type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic)
-                        .Where(method =>
-                        {
-                            var redirectAttributes = method.GetCustomAttributes(typeof(RedirectMethodAttribute), false);
-                            if (redirectAttributes.Length != 1)
-                            {
-                                return false;
-                            }
-                            return ((RedirectMethodAttribute)redirectAttributes[0]).OnCreated == onCreated;
-                        }))
+            foreach (var method in GetRedirectedMethods<RedirectMethodAttribute>(type, onCreated))
             {
-                if (determineTMPEisLoaded() == false || targetType.Name != "RoadBaseAI")
-                {
-                    UnityEngine.Debug.Log($"Redirecting {targetType.Name}#{method.Name}...");
-                    RedirectMethod(targetType, method, redirects);
-                }
+                //                UnityEngine.Debug.Log($"Redirecting {targetType.Name}#{method.Name}...");
+                RedirectMethod(targetType, method, redirects);
             }
+        }
+
+        private static IEnumerable<MethodInfo> GetRedirectedMethods<T>(Type type, bool onCreated) where T : RedirectAttribute
+        {
+            return GetRedirectedMethods<T>(type).Where(method =>
+            {
+                var redirectAttributes = method.GetCustomAttributes(typeof(T), false);
+                return ((T)redirectAttributes[0]).OnCreated == onCreated;
+            });
+        }
+
+        private static IEnumerable<MethodInfo> GetRedirectedMethods<T>(Type type) where T : RedirectAttribute
+        {
+            return type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic)
+                .Where(method =>
+                {
+                    var redirectAttributes = method.GetCustomAttributes(typeof(T), false);
+                    return redirectAttributes.Length == 1;
+                });
         }
 
         private static void RedirectReverse(Type type, Type targetType, Dictionary<MethodInfo, RedirectCallsState> redirects, bool onCreated)
         {
-            foreach (
-                var method in
-                    type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic)
-                        .Where(method =>
-                        {
-                            var redirectAttributes = method.GetCustomAttributes(typeof(RedirectReverseAttribute), false);
-                            if (redirectAttributes.Length == 1)
-                            {
-                                return ((RedirectReverseAttribute)redirectAttributes[0]).OnCreated == onCreated;
-                            }
-                            return false;
-                        }))
+            foreach (var method in GetRedirectedMethods<RedirectReverseAttribute>(type, onCreated))
             {
-                UnityEngine.Debug.Log($"Redirecting reverse {targetType.Name}#{method.Name}...");
+                //                UnityEngine.Debug.Log($"Redirecting reverse {targetType.Name}#{method.Name}...");
                 RedirectMethod(targetType, method, redirects, true);
             }
         }
@@ -155,7 +116,8 @@ namespace Rainfall.Redirection
             {
                 types = parameters.Skip(1).Select(p => p.ParameterType).ToArray();
             }
-            else {
+            else
+            {
                 types = parameters.Select(p => p.ParameterType).ToArray();
             }
             var originalMethod = targetType.GetMethod(detour.Name,

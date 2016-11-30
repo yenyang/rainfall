@@ -1,4 +1,4 @@
-﻿using Rainfall.Redirection.Attributes;
+﻿using Rainfall.Redirection;
 using ColossalFramework;
 using ColossalFramework.Math;
 using System;
@@ -14,50 +14,7 @@ namespace Rainfall
         [RedirectMethod]
         public override void SimulationStep(ushort segmentID, ref NetSegment data)
         {
-            //Start PlayerNEtAI.SimulationStep
-
-            if (this.HasMaintenanceCost(segmentID, ref data))
-            {
-                NetManager playerNetAIinstance = Singleton<NetManager>.instance;
-                Vector3 playerNetAIposition = playerNetAIinstance.m_nodes.m_buffer[(int)data.m_startNode].m_position;
-                Vector3 playerNetAIposition2 = playerNetAIinstance.m_nodes.m_buffer[(int)data.m_endNode].m_position;
-                int playerNetAInum = this.GetMaintenanceCost(playerNetAIposition, playerNetAIposition2);
-                bool playerNetAIflag = (ulong)(Singleton<SimulationManager>.instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15));
-                if (playerNetAInum != 0)
-                {
-                    if (playerNetAIflag)
-                    {
-                        playerNetAInum = playerNetAInum * 16 / 100 - playerNetAInum / 100 * 15;
-                    }
-                    else
-                    {
-                        playerNetAInum /= 100;
-                    }
-                    Singleton<EconomyManager>.instance.FetchResource(EconomyManager.Resource.Maintenance, playerNetAInum, this.m_info.m_class);
-                }
-                if (playerNetAIflag)
-                {
-                    float playerNetAInum2 = (float)playerNetAIinstance.m_nodes.m_buffer[(int)data.m_startNode].m_elevation;
-                    float playerNetAInum3 = (float)playerNetAIinstance.m_nodes.m_buffer[(int)data.m_endNode].m_elevation;
-                    if (this.IsUnderground())
-                    {
-                        playerNetAInum2 = -playerNetAInum2;
-                        playerNetAInum3 = -playerNetAInum3;
-                    }
-                    int constructionCost = this.GetConstructionCost(playerNetAIposition, playerNetAIposition2, playerNetAInum2, playerNetAInum3);
-                    if (constructionCost != 0)
-                    {
-                        StatisticBase statisticBase = Singleton<StatisticsManager>.instance.Acquire<StatisticInt64>(StatisticType.CityValue);
-                        if (statisticBase != null)
-                        {
-                            statisticBase.Add(constructionCost);
-                        }
-                    }
-                }
-            }
-            //End  PlayerNEtAI.SimulationStep
-
-
+            base.SimulationStep(segmentID, ref data);
             SimulationManager instance = Singleton<SimulationManager>.instance;
             NetManager instance2 = Singleton<NetManager>.instance;
             Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood | Notification.Problem.Snow);
@@ -117,7 +74,6 @@ namespace Rainfall
                 {
                     flag = true;
                     data.m_flags |= NetSegment.Flags.Flooded;
-                    //Debug.Log("[RF] Successfully detoured roadway flooded tolerance");
                     problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
                     Vector3 min = data.m_bounds.min;
                     Vector3 max = data.m_bounds.max;
@@ -129,14 +85,13 @@ namespace Rainfall
 
                     // Rainfall compatibility
                     float add = (float)ModSettings.RoadwayFloodingTolerance / 100;
-                    //Debug.Log("[RF] Successfully detoured roadway flooding tolerance");
+
                     if (num6 > vector.y + add)
                     {
                         flag = true;
                         problem = Notification.AddProblems(problem, Notification.Problem.Flood);
                     }
                 }
-                //Debug.Log("[RF] Successfully detoured roadway flooding tolerance: not flooding");
                 // NON-STOCK CODE END
             }
             DistrictManager instance3 = Singleton<DistrictManager>.instance;

@@ -72,17 +72,22 @@ namespace Rainfall
             GravityDrainageDropDown = group.AddDropdown("Gravity Drainage Options", gravityDrainageDropDownOptions, ModSettings.GravityDrainageOption, OnGravityDrainageOptionChanged) as UIDropDown;
             DifficultySlider = group.AddSlider("Difficulty", 0f, (float)ModSettings._maxDifficulty, (float)ModSettings._difficultyStep, (float)ModSettings.Difficulty, OnDifficultyChanged) as UISlider;
             DifficultySlider.tooltip = ModSettings.Difficulty.ToString() + "%";
+            DifficultySlider.width += 100;
             RefreshRateSlider = group.AddSlider("Refresh Rate", 1f, (float)ModSettings._maxRefreshRate, 1f, (float)ModSettings.RefreshRate, OnRefreshRateChanged) as UISlider;
             RefreshRateSlider.tooltip = ModSettings.RefreshRate.ToString() + " seconds";
-            BuildingFloodingToleranceSlider = group.AddSlider("Building Flooding Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodingTolerance, OnBuildingFloodingToleranceChanged) as UISlider;
+            RefreshRateSlider.width += 100;
+            BuildingFloodingToleranceSlider = group.AddSlider("Building Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodingTolerance, OnBuildingFloodingToleranceChanged) as UISlider;
             BuildingFloodingToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodingTolerance / 100f).ToString() + " units";
-            BuildingFloodedToleranceSlider = group.AddSlider("Building Flooded Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodedTolerance, OnBuildingFloodedToleranceChanged) as UISlider;
+            BuildingFloodingToleranceSlider.width += 100;
+            BuildingFloodedToleranceSlider = group.AddSlider("Building Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodedTolerance, OnBuildingFloodedToleranceChanged) as UISlider;
             BuildingFloodedToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodedTolerance/100f).ToString() + " units";
-            RoadwayFloodingToleranceSlider = group.AddSlider("Roadway Flooding Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodingTolerance, OnRoadwayFloodingToleranceChanged) as UISlider;
+            BuildingFloodedToleranceSlider.width += 100;
+            RoadwayFloodingToleranceSlider = group.AddSlider("Roadway Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodingTolerance, OnRoadwayFloodingToleranceChanged) as UISlider;
             RoadwayFloodingToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodingTolerance / 100f).ToString() + " units";
-            RoadwayFloodedToleranceSlider = group.AddSlider("Roadway Flooded Tolerance", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
+            RoadwayFloodingToleranceSlider.width += 100;
+            RoadwayFloodedToleranceSlider = group.AddSlider("Roadway Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
             RoadwayFloodedToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodedTolerance / 100f).ToString() + " units";
-            
+            RoadwayFloodedToleranceSlider.width += 100;
 
             UIHelperBase StormWaterSimulationGroup = helper.AddGroup("Stormwater Simulation Settings");
             AutomaticallyPickStormDistributionCheckBox = StormWaterSimulationGroup.AddCheckbox("Automatically Select Storm Distribution", ModSettings.AutomaticStormDistribution, OnAutomaticStormDistributionCheckBoxChanged) as UICheckBox;
@@ -91,13 +96,16 @@ namespace Rainfall
             stormDistributionNames = getStormDistributionDropDownOptions();
             StormDistributionDropDown = StormWaterSimulationGroup.AddDropdown("Storm Distribution", stormDistributionNames, getStormDistributionIndex(ModSettings.StormDistributionName), OnStormDistributionDropDownChanged) as UIDropDown;
             TimeScaleDropDown = StormWaterSimulationGroup.AddDropdown("Storm Simulation Time Scale Multiplier", TimeScalesString, getTimeScaleIndex(ModSettings.TimeScale), OnTimeScaleChanged) as UIDropDown;
-            MinimumStormDurationSlider = StormWaterSimulationGroup.AddSlider("Minimum Storm Duration", ModSettings._minStormDuration, ModSettings._maxStormDuration, ModSettings._stormDurationStep, (float)ModSettings.MinimumStormDuration, onMinimumStormDurationChanged) as UISlider;
+            MinimumStormDurationSlider = StormWaterSimulationGroup.AddSlider("Min. Storm Duration", ModSettings._minStormDuration, ModSettings._maxStormDuration, ModSettings._stormDurationStep, (float)ModSettings.MinimumStormDuration, onMinimumStormDurationChanged) as UISlider;
             MinimumStormDurationSlider.tooltip = convertMinToHourMin((float)ModSettings.MinimumStormDuration);
-            MaximumStormDurationSlider = StormWaterSimulationGroup.AddSlider("Maximum Storm Duration", ModSettings._minStormDuration, ModSettings._maxStormDuration, ModSettings._stormDurationStep, (float)ModSettings.MaximumStormDuration, onMaximumStormDurationChanged) as UISlider;
-            MaximumStormDurationSlider.tooltip = convertMinToHourMin((float)ModSettings.MaximumStormDuration);
-            MaximumStormIntensitySlider = StormWaterSimulationGroup.AddSlider("Maximum Storm Intensity", ModSettings._minStormIntensity, ModSettings._maxStormIntensity, ModSettings._stormIntenistyStep, (float)ModSettings.MaximumStormIntensity, onMaximumStormIntensityChanged) as UISlider;
-            MaximumStormIntensitySlider.tooltip = ModSettings.MaximumStormIntensity.ToString() + " Units/Hour";
+            MinimumStormDurationSlider.width += 100;
+            MaximumStormDurationSlider = StormWaterSimulationGroup.AddSlider("Max. Storm Duration", ModSettings._minStormDuration, ModSettings._maxStormDuration, ModSettings._stormDurationStep, (float)ModSettings.MaximumStormDuration, onMaximumStormDurationChanged) as UISlider;
 
+            MaximumStormDurationSlider.tooltip = convertMinToHourMin((float)ModSettings.MaximumStormDuration);
+            MaximumStormDurationSlider.width += 100;
+            MaximumStormIntensitySlider = StormWaterSimulationGroup.AddSlider("Max. Intensity", ModSettings._minStormIntensity, ModSettings._maxStormIntensity, ModSettings._stormIntenistyStep, (float)ModSettings.MaximumStormIntensity, onMaximumStormIntensityChanged) as UISlider;
+            MaximumStormIntensitySlider.tooltip = ModSettings.MaximumStormIntensity.ToString() + " Units/Hour";
+            MaximumStormIntensitySlider.width += 100;
             UIHelperBase PublicBuildingsRunOffCoefficientsGroup = helper.AddGroup("Public Buildings Runoff Coefficient Settings");
             initializeRunoffCoefficientSliders();
             createRunoffCoefficientSliders(PublicBuildingsRunOffCoefficientsGroup, PublicBuildingsRunoffCoefficientSliders);

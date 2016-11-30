@@ -1,5 +1,6 @@
-﻿using Rainfall.Redirection;
+﻿using Rainfall.Redirection.Attributes;
 using ColossalFramework;
+using ICities;
 using ColossalFramework.Math;
 using UnityEngine;
 
@@ -7,10 +8,10 @@ namespace Rainfall
 {
 
     [TargetType(typeof(CommonBuildingAI))]
-    internal class CommonBuildingAIDetour:CommonBuildingAI
+    internal class CommonBuildingAIDetour : CommonBuildingAI
     {
         [RedirectMethod]
-        new int HandleCommonConsumption(ushort buildingID, ref Building data, ref int electricityConsumption, ref int heatingConsumption, ref int waterConsumption, ref int sewageAccumulation, ref int garbageAccumulation, DistrictPolicies.Services policies)
+        new protected int HandleCommonConsumption(ushort buildingID, ref Building data, ref Building.Frame frameData, ref int electricityConsumption, ref int heatingConsumption, ref int waterConsumption, ref int sewageAccumulation, ref int garbageAccumulation, DistrictPolicies.Services policies)
         {
             int num = 100;
             DistrictManager instance = Singleton<DistrictManager>.instance;
@@ -79,11 +80,39 @@ namespace Rainfall
                     heatingUsage = heatingConsumption;
                     data.m_heatingBuffer -= (ushort)heatingConsumption;
                 }
-                num4 = electricityConsumption * 2 - (int)data.m_electricityBuffer;
-                if (num4 > 0)
+                int num6;
+                int a;
+                if (this.CanStockpileElectricity(buildingID, ref data, out num6, out a))
                 {
-                    int num6 = Singleton<ElectricityManager>.instance.TryFetchElectricity(data.m_position, electricityConsumption, num4);
-                    data.m_electricityBuffer += (ushort)num6;
+                    num4 = num6 + electricityConsumption * 2 - (int)data.m_electricityBuffer;
+                    if (num4 > 0)
+                    {
+                        int num7 = electricityConsumption;
+                        if ((int)data.m_electricityBuffer < num6)
+                        {
+                            num7 += Mathf.Min(a, num6 - (int)data.m_electricityBuffer);
+                        }
+                        int num8 = Singleton<ElectricityManager>.instance.TryFetchElectricity(data.m_position, num7, num4);
+                        data.m_electricityBuffer += (ushort)num8;
+                        if (num8 < num4 && num8 < num7)
+                        {
+                            flag2 = true;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Electricity);
+                            if (data.m_electricityProblemTimer < 64)
+                            {
+                                data.m_electricityProblemTimer = 64;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    num4 = electricityConsumption * 2 - (int)data.m_electricityBuffer;
+                    if (num4 > 0)
+                    {
+                        int num9 = Singleton<ElectricityManager>.instance.TryFetchElectricity(data.m_position, electricityConsumption, num4);
+                        data.m_electricityBuffer += (ushort)num9;
+                    }
                 }
                 if ((int)data.m_electricityBuffer < electricityConsumption)
                 {
@@ -143,7 +172,7 @@ namespace Rainfall
                 data.m_heatingProblemTimer = 0;
             }
             bool flag5 = false;
-            int num7 = sewageAccumulation;
+            int num10 = sewageAccumulation;
             if (waterConsumption != 0)
             {
                 if ((policies & DistrictPolicies.Services.WaterSaving) != DistrictPolicies.Services.None)
@@ -155,11 +184,39 @@ namespace Rainfall
                     }
                     Singleton<EconomyManager>.instance.FetchResource(EconomyManager.Resource.PolicyCost, 32, this.m_info.m_class);
                 }
-                int num8 = waterConsumption * 2 - (int)data.m_waterBuffer;
-                if (num8 > 0)
+                int num11;
+                int a2;
+                if (this.CanStockpileWater(buildingID, ref data, out num11, out a2))
                 {
-                    int num9 = Singleton<WaterManager>.instance.TryFetchWater(data.m_position, waterConsumption, num8, ref data.m_waterPollution);
-                    data.m_waterBuffer += (ushort)num9;
+                    int num12 = num11 + waterConsumption * 2 - (int)data.m_waterBuffer;
+                    if (num12 > 0)
+                    {
+                        int num13 = waterConsumption;
+                        if ((int)data.m_waterBuffer < num11)
+                        {
+                            num13 += Mathf.Min(a2, num11 - (int)data.m_waterBuffer);
+                        }
+                        int num14 = Singleton<WaterManager>.instance.TryFetchWater(data.m_position, num13, num12, ref data.m_waterPollution);
+                        data.m_waterBuffer += (ushort)num14;
+                        if (num14 < num12 && num14 < num13)
+                        {
+                            flag5 = true;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Water);
+                            if (data.m_waterProblemTimer < 64)
+                            {
+                                data.m_waterProblemTimer = 64;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    int num15 = waterConsumption * 2 - (int)data.m_waterBuffer;
+                    if (num15 > 0)
+                    {
+                        int num16 = Singleton<WaterManager>.instance.TryFetchWater(data.m_position, waterConsumption, num15, ref data.m_waterPollution);
+                        data.m_waterBuffer += (ushort)num16;
+                    }
                 }
                 if ((int)data.m_waterBuffer < waterConsumption)
                 {
@@ -175,7 +232,7 @@ namespace Rainfall
                         num /= 2;
                         problem = Notification.AddProblems(problem, Notification.Problem.Water);
                     }
-                    num7 = sewageAccumulation * (waterConsumption + (int)data.m_waterBuffer) / (waterConsumption << 1);
+                    num10 = sewageAccumulation * (waterConsumption + (int)data.m_waterBuffer) / (waterConsumption << 1);
                     waterUsage = (int)data.m_waterBuffer;
                     data.m_waterBuffer = 0;
                     if (Singleton<UnlockManager>.instance.Unlocked(ItemClass.Service.Water))
@@ -199,15 +256,17 @@ namespace Rainfall
                 }
                 else
                 {
-                    num7 = sewageAccumulation;
+                    num10 = sewageAccumulation;
                     waterUsage = waterConsumption;
                     data.m_waterBuffer -= (ushort)waterConsumption;
                 }
             }
-            if (num7 != 0)
+            int num17;
+            int b;
+            if (this.CanStockpileWater(buildingID, ref data, out num17, out b))
             {
-                int num10 = num7 * 2 - (int)data.m_sewageBuffer;
-                if (num10 < num7)
+                int num18 = Mathf.Max(0, num17 + num10 * 2 - (int)data.m_sewageBuffer);
+                if (num18 < num10)
                 {
                     if (!flag5 && (data.m_problems & Notification.Problem.Water) == Notification.Problem.None)
                     {
@@ -224,13 +283,64 @@ namespace Rainfall
                             problem = Notification.AddProblems(problem, Notification.Problem.Sewage);
                         }
                     }
-                    sewageUsage = num10;
-                    data.m_sewageBuffer = (ushort)(num7 * 2);
+                    sewageUsage = num18;
+                    data.m_sewageBuffer = (ushort)(num17 + num10 * 2);
                 }
                 else
                 {
-                    sewageUsage = num7;
-                    data.m_sewageBuffer += (ushort)num7;
+                    sewageUsage = num10;
+                    data.m_sewageBuffer += (ushort)num10;
+                }
+                int num19 = num10 + Mathf.Max(num10, b);
+                num18 = Mathf.Min(num19, (int)data.m_sewageBuffer);
+                if (num18 > 0)
+                {
+                    int num20 = Singleton<WaterManager>.instance.TryDumpSewage(data.m_position, num19, num18);
+                    data.m_sewageBuffer -= (ushort)num20;
+                    if (num20 < num19 && num20 < num18 && !flag5 && (data.m_problems & Notification.Problem.Water) == Notification.Problem.None)
+                    {
+                        flag5 = true;
+                        problem = Notification.AddProblems(problem, Notification.Problem.Sewage);
+                        if (data.m_waterProblemTimer < 64)
+                        {
+                            data.m_waterProblemTimer = 64;
+                        }
+                    }
+                }
+            }
+            else if (num10 != 0)
+            {
+                int num21 = Mathf.Max(0, num10 * 2 - (int)data.m_sewageBuffer);
+                if (num21 < num10)
+                {
+                    if (!flag5 && (data.m_problems & Notification.Problem.Water) == Notification.Problem.None)
+                    {
+                        flag5 = true;
+                        data.m_waterProblemTimer = (byte)Mathf.Min(255, (int)(data.m_waterProblemTimer + 1));
+                        if (data.m_waterProblemTimer >= 65)
+                        {
+                            num = 0;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Sewage | Notification.Problem.MajorProblem);
+                        }
+                        else if (data.m_waterProblemTimer >= 3)
+                        {
+                            num /= 2;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Sewage);
+                        }
+                    }
+                    sewageUsage = num21;
+                    data.m_sewageBuffer = (ushort)(num10 * 2);
+                }
+                else
+                {
+                    sewageUsage = num10;
+                    data.m_sewageBuffer += (ushort)num10;
+                }
+                num21 = Mathf.Min(num10 * 2, (int)data.m_sewageBuffer);
+                if (num21 > 0)
+                {
+                    int num22 = Singleton<WaterManager>.instance.TryDumpSewage(data.m_position, num10 * 2, num21);
+                    data.m_sewageBuffer -= (ushort)num22;
                 }
             }
             if (!flag5)
@@ -239,11 +349,11 @@ namespace Rainfall
             }
             if (garbageAccumulation != 0)
             {
-                int num11 = (int)(65535 - data.m_garbageBuffer);
-                if (num11 < garbageAccumulation)
+                int num23 = (int)(65535 - data.m_garbageBuffer);
+                if (num23 < garbageAccumulation)
                 {
                     num = 0;
-                    data.m_garbageBuffer = (ushort)num11;
+                    data.m_garbageBuffer = (ushort)num23;
                 }
                 else
                 {
@@ -262,30 +372,21 @@ namespace Rainfall
                     //end edit
                 }
             }
-            if (num7 != 0)
-            {
-                int num12 = Mathf.Min(num7 * 2, (int)data.m_sewageBuffer);
-                if (num12 > 0)
-                {
-                    int num13 = Singleton<WaterManager>.instance.TryDumpSewage(data.m_position, num7 * 2, num12);
-                    data.m_sewageBuffer -= (ushort)num13;
-                }
-            }
             if (garbageAccumulation != 0)
             {
-                int num14 = (int)data.m_garbageBuffer;
-                if (num14 >= 200 && Singleton<SimulationManager>.instance.m_randomizer.Int32(5u) == 0 && Singleton<UnlockManager>.instance.Unlocked(ItemClass.Service.Garbage))
+                int num24 = (int)data.m_garbageBuffer;
+                if (num24 >= 200 && Singleton<SimulationManager>.instance.m_randomizer.Int32(5u) == 0 && Singleton<UnlockManager>.instance.Unlocked(ItemClass.Service.Garbage))
                 {
-                    int num15 = 0;
-                    int num16 = 0;
-                    int num17 = 0;
-                    int num18 = 0;
-                    this.CalculateGuestVehicles(buildingID, ref data, TransferManager.TransferReason.Garbage, ref num15, ref num16, ref num17, ref num18);
-                    num14 -= num17 - num16;
-                    if (num14 >= 200)
+                    int num25 = 0;
+                    int num26 = 0;
+                    int num27 = 0;
+                    int num28 = 0;
+                    this.CalculateGuestVehicles(buildingID, ref data, TransferManager.TransferReason.Garbage, ref num25, ref num26, ref num27, ref num28);
+                    num24 -= num27 - num26;
+                    if (num24 >= 200)
                     {
                         TransferManager.TransferOffer offer = default(TransferManager.TransferOffer);
-                        offer.Priority = num14 / 1000;
+                        offer.Priority = num24 / 1000;
                         offer.Building = buildingID;
                         offer.Position = data.m_position;
                         offer.Amount = 1;
@@ -293,39 +394,140 @@ namespace Rainfall
                     }
                 }
             }
-            if (this.CanSufferFromFlood())
+            bool flag6;
+            if (this.CanSufferFromFlood(out flag6))
             {
-                float num19 = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position));
-                if (num19 > data.m_position.y)
+                float num29 = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position));
+                if (num29 > data.m_position.y)
                 {
-                   
-                    if (num19 > data.m_position.y + (float)ModSettings.BuildingFloodedTolerance/100f)
+                    bool flag7 = num29 > data.m_position.y + Mathf.Max(4f, this.m_info.m_collisionHeight);
+                    if ((!flag6 || flag7) && (data.m_flags & Building.Flags.Flooded) == Building.Flags.None && data.m_fireIntensity == 0)
                     {
-                        //Debug.Log("[RF].CBAId Detoured Flooded Notification");
-                        num = 0;
-                        problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                        DisasterManager instance2 = Singleton<DisasterManager>.instance;
+                        ushort num30 = instance2.FindDisaster<FloodBaseAI>(data.m_position);
+                        if (num30 == 0)
+                        {
+                            DisasterInfo disasterInfo = DisasterManager.FindDisasterInfo<GenericFloodAI>();
+                            if (disasterInfo != null && instance2.CreateDisaster(out num30, disasterInfo))
+                            {
+                                instance2.m_disasters.m_buffer[(int)num30].m_intensity = 10;
+                                instance2.m_disasters.m_buffer[(int)num30].m_targetPosition = data.m_position;
+                                disasterInfo.m_disasterAI.StartNow(num30, ref instance2.m_disasters.m_buffer[(int)num30]);
+                            }
+                        }
+                        if (num30 != 0)
+                        {
+                            InstanceID srcID = default(InstanceID);
+                            InstanceID dstID = default(InstanceID);
+                            srcID.Disaster = num30;
+                            dstID.Building = buildingID;
+                            Singleton<InstanceManager>.instance.CopyGroup(srcID, dstID);
+                            DisasterInfo info = instance2.m_disasters.m_buffer[(int)num30].Info;
+                            info.m_disasterAI.ActivateNow(num30, ref instance2.m_disasters.m_buffer[(int)num30]);
+                            if ((instance2.m_disasters.m_buffer[(int)num30].m_flags & DisasterData.Flags.Significant) != DisasterData.Flags.None)
+                            {
+                                instance2.DetectDisaster(num30, false);
+                                instance2.FollowDisaster(num30);
+                            }
+                        }
+                        data.m_flags |= Building.Flags.Flooded;
                     }
-                    else if (num19 > data.m_position.y + (float)ModSettings.BuildingFloodingTolerance/100f)
+                    if (flag7)
                     {
-                        //Debug.Log("[RF].CBAId Detoured Flooding Notification");
-                        num /= 2;
-                        problem = Notification.AddProblems(problem, Notification.Problem.Flood);
+                        frameData.m_constructState = (byte)Mathf.Max(0, (int)frameData.m_constructState - 1088 / this.GetCollapseTime());
+                        data.SetFrameData(Singleton<SimulationManager>.instance.m_currentFrameIndex, frameData);
+                        InstanceID id = default(InstanceID);
+                        id.Building = buildingID;
+                        InstanceManager.Group group = Singleton<InstanceManager>.instance.GetGroup(id);
+                        if (group != null)
+                        {
+                            ushort disaster = group.m_ownerInstance.Disaster;
+                            if (disaster != 0)
+                            {
+                                DisasterData[] expr_D18_cp_0 = Singleton<DisasterManager>.instance.m_disasters.m_buffer;
+                                ushort expr_D18_cp_1 = disaster;
+                                expr_D18_cp_0[(int)expr_D18_cp_1].m_collapsedCount = (ushort)(expr_D18_cp_0[(int)expr_D18_cp_1].m_collapsedCount + 1);
+                            }
+                        }
+                        if (frameData.m_constructState == 0)
+                        {
+                            Singleton<InstanceManager>.instance.SetGroup(id, null);
+                        }
+                        data.m_levelUpProgress = 0;
+                        data.m_fireIntensity = 0;
+                        data.m_garbageBuffer = 0;
+                        data.m_flags |= Building.Flags.Collapsed;
+                        num = 0;
+                        this.RemovePeople(buildingID, ref data, 90);
+                        this.BuildingDeactivated(buildingID, ref data);
+                        if (this.m_info.m_hasParkingSpaces != VehicleInfo.VehicleType.None)
+                        {
+                            Singleton<BuildingManager>.instance.UpdateParkingSpaces(buildingID, ref data);
+                        }
+                        Singleton<BuildingManager>.instance.UpdateBuildingRenderer(buildingID, true);
+                        Singleton<BuildingManager>.instance.UpdateBuildingColors(buildingID);
                         GuideController properties3 = Singleton<GuideManager>.instance.m_properties;
                         if (properties3 != null)
                         {
-                            Singleton<BuildingManager>.instance.m_buildingFlooded.Activate(properties3.m_buildingFlooded, buildingID);
+                            Singleton<BuildingManager>.instance.m_buildingFlooded.Deactivate(buildingID, false);
+                            Singleton<BuildingManager>.instance.m_buildingFlooded2.Deactivate(buildingID, false);
+                        }
+                    }
+                    else if (!flag6)
+                    {
+                        if ((data.m_flags & Building.Flags.RoadAccessFailed) == Building.Flags.None)
+                        {
+                            int num31 = 0;
+                            int num32 = 0;
+                            int num33 = 0;
+                            int num34 = 0;
+                            this.CalculateGuestVehicles(buildingID, ref data, TransferManager.TransferReason.FloodWater, ref num31, ref num32, ref num33, ref num34);
+                            if (num31 == 0)
+                            {
+                                TransferManager.TransferOffer offer2 = default(TransferManager.TransferOffer);
+                                offer2.Priority = 5;
+                                offer2.Building = buildingID;
+                                offer2.Position = data.m_position;
+                                offer2.Amount = 1;
+                                Singleton<TransferManager>.instance.AddOutgoingOffer(TransferManager.TransferReason.FloodWater, offer2);
+                            }
+                        }
+                        if (num29 > data.m_position.y + (float)ModSettings.BuildingFloodedTolerance / 100f)
+                        {
+                            num = 0;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                        }
+                        else if (num29 > data.m_position.y + (float)ModSettings.BuildingFloodingTolerance / 100f)
+                        {
+                            num /= 2;
+                            problem = Notification.AddProblems(problem, Notification.Problem.Flood);
+                        }
+                        GuideController properties4 = Singleton<GuideManager>.instance.m_properties;
+                        if (properties4 != null)
+                        {
+                            if (Singleton<LoadingManager>.instance.SupportsExpansion(Expansion.NaturalDisasters) && Singleton<UnlockManager>.instance.Unlocked(UnlockManager.Feature.WaterPumping))
+                            {
+                                Singleton<BuildingManager>.instance.m_buildingFlooded2.Activate(properties4.m_buildingFlooded2, buildingID);
+                            }
+                            else
+                            {
+                                Singleton<BuildingManager>.instance.m_buildingFlooded.Activate(properties4.m_buildingFlooded, buildingID);
+                            }
                         }
                     }
                 }
-                //Debug.Log("[RF].CBAId Detouring was sucessful!");
+                else if ((data.m_flags & Building.Flags.Flooded) != Building.Flags.None)
+                {
+                    InstanceID id2 = default(InstanceID);
+                    id2.Building = buildingID;
+                    Singleton<InstanceManager>.instance.SetGroup(id2, null);
+                    data.m_flags &= ~Building.Flags.Flooded;
+                }
             }
-            
             byte district = instance.GetDistrict(data.m_position);
             instance.m_districts.m_buffer[(int)district].AddUsageData(electricityUsage, heatingUsage, waterUsage, sewageUsage);
             data.m_problems = problem;
             return num;
         }
-        
-
     }
 }

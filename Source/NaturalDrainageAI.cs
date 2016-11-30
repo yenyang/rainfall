@@ -146,10 +146,10 @@ namespace Rainfall
          
             return toolErrors;
         }
-      
 
 
-        protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
+
+        protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, int finalProductionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
         {
             productionRate = 0;
             TerrainManager instance = Singleton<TerrainManager>.instance;
@@ -179,8 +179,8 @@ namespace Rainfall
                 waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
                 
             }
-            base.ProduceGoods(buildingID, ref buildingData, ref frameData, productionRate, ref behaviour, aliveWorkerCount, totalWorkerCount, workPlaceCount, aliveVisitorCount, totalVisitorCount, visitPlaceCount);
-            
+            base.ProduceGoods(buildingID, ref buildingData, ref frameData, productionRate, finalProductionRate, ref behaviour, aliveWorkerCount, totalWorkerCount, workPlaceCount, aliveVisitorCount, totalVisitorCount, visitPlaceCount);
+
         }
 
         private bool HandleWaterSource(ushort buildingID, ref Building data, bool output, int rate, int max, float radius)
@@ -213,9 +213,14 @@ namespace Rainfall
         }
 
 
-        protected override bool CanSufferFromFlood()
+        protected override bool CanSufferFromFlood( out bool onlyCollapse)
         {
-
+            if (this.m_info.m_placementMode == BuildingInfo.PlacementMode.OnGround || this.m_info.m_placementMode == BuildingInfo.PlacementMode.Roadside)
+            {
+                onlyCollapse = true;
+                return true;
+            }
+            onlyCollapse = false;
             return false;
         }
         public override float ElectricityGridRadius()

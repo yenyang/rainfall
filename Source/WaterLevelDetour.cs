@@ -1,4 +1,4 @@
-﻿using Rainfall.Redirection;
+﻿using Rainfall.Redirection.Attributes;
 using ColossalFramework;
 using ColossalFramework.Math;
 using UnityEngine;
