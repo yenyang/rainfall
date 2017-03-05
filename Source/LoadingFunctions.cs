@@ -3,13 +3,15 @@ using UnityEngine;
 using System.Reflection;
 using System.Collections.Generic;
 using Rainfall.Redirection;
+using ColossalFramework;
+using System;
 
 namespace Rainfall
 {
     public class LoadingFunctions : LoadingExtensionBase
     {
         private LoadMode _mode;
-        
+        public static bool fineRoadAnarchyLoaded = false;
 
         public override void OnCreated(ILoading loading)
         {
@@ -26,7 +28,6 @@ namespace Rainfall
             Hydrology.instance.loaded = true;
             Hydraulics.instance.loaded = true;
             Debug.Log("[RF] Level Loaded!");
-            
             base.OnLevelLoaded(mode);
         }
 
@@ -48,6 +49,8 @@ namespace Rainfall
             base.OnReleased();
             AssemblyRedirector.Revert();
         }
+      
+        
     }
 }
 

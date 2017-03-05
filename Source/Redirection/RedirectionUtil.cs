@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Rainfall.Redirection.Attributes;
+using ICities;
+using ColossalFramework;
 
 namespace Rainfall.Redirection
 {
@@ -67,7 +69,8 @@ namespace Rainfall.Redirection
             foreach (var method in GetRedirectedMethods<RedirectMethodAttribute>(type, onCreated))
             {
                 //                UnityEngine.Debug.Log($"Redirecting {targetType.Name}#{method.Name}...");
-                RedirectMethod(targetType, method, redirects);
+           
+                    RedirectMethod(targetType, method, redirects);
             }
         }
 
@@ -127,5 +130,6 @@ namespace Rainfall.Redirection
                 reverse ? RedirectionHelper.RedirectCalls(detour, originalMethod) : RedirectionHelper.RedirectCalls(originalMethod, detour);
             return Tuple.New(reverse ? detour : originalMethod, redirectCallsState);
         }
+      
     }
 }

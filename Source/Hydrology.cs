@@ -52,6 +52,8 @@ namespace Rainfall
         public int[] _preRainfallLandvalues;
         private string rainUnlockMilestone = "Milestone3";
         private uint waterSourceMaxQuantitiy = 100000000u;
+        public bool cleanUpCycle = false;
+        public bool endStorm = false;
 
         private List<string> mildQuotes;
         private List<string> normalQuotes;
@@ -67,6 +69,7 @@ namespace Rainfall
         private SortedList<float, string> intensityAdjectives;
         private List<string> beforeReturnRateStatements;
         private List<string> closingStatements;
+        
 
         public Hydrology()
         {
@@ -192,6 +195,13 @@ namespace Rainfall
                     }
                 }
             }
+            if (endStorm == true)
+            {
+                improvedSimulation = false;
+                _weatherManager.m_currentRain = 0;
+                _weatherManager.m_targetRain = 0;
+                endStorm = false;
+            }
             base.OnBeforeSimulationTick();
 
         }
@@ -314,6 +324,10 @@ namespace Rainfall
                 }
                 _newBuildingIDs.Clear();
                 _removeBuildingIDs.Clear();
+                if (cleanUpCycle == true)
+                {
+                    _weatherManager.m_targetRain = 1;
+                }
                 //Debug.Log("[RF].Hydrology  not raining ");
             }
             else if (_weatherManager.m_currentRain > 0 && isRaining == false && simulationTimeDelta > 0) {
@@ -594,7 +608,14 @@ namespace Rainfall
                                     //Debug.Log("[RF].Hydrology  " + id.ToString() + " building has flow " + currentSource.m_flow);
                                     if (flowRate > 0u)
                                     {
-                                        currentSource.m_outputRate = flowRate;
+                                        if (cleanUpCycle == false)
+                                        {
+                                            currentSource.m_outputRate = flowRate;
+                                        } else
+                                        {
+                                            currentSource.m_inputRate = 100u;
+                                            currentSource.m_outputRate = 0;
+                                        }
                                         currentSource.m_flow = flowRate;
                                         currentSource.m_water = waterSourceMaxQuantitiy;
                                         int buildingPollutionAccumulation;
@@ -744,6 +765,7 @@ namespace Rainfall
                     }
                 }
                 isRaining = false;
+                cleanUpCycle = false;
                 _preRainfallLandvalues = new int[_capacity];
                //Debug.Log("[RF].Hydrology  No longer Raining. int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
             }
@@ -794,8 +816,15 @@ namespace Rainfall
             uint flowRate = (uint)calculateFlowRate(id, _weatherManager.m_currentRain);
 
             surfaceflow.m_flow = flowRate;
-            surfaceflow.m_inputRate = 0u;
-            surfaceflow.m_outputRate = flowRate;
+            if (cleanUpCycle == false)
+            {
+                surfaceflow.m_inputRate = 0u;
+                surfaceflow.m_outputRate = flowRate;
+            } else
+            {
+                surfaceflow.m_inputRate = 100u;
+                surfaceflow.m_outputRate = 0;
+            }
 
             surfaceflow.m_outputPosition = _buildingManager.m_buildings.m_buffer[id].CalculateSidewalkPosition();
             Building currentBuilding = this._buildingManager.m_buildings.m_buffer[id];

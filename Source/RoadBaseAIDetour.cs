@@ -119,6 +119,10 @@ namespace Rainfall
                     data.m_flags |= NetSegment.Flags.Flooded;
                     //Debug.Log("[RF] Successfully detoured roadway flooded tolerance");
                     problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                    /*DisasterData floodedSinkHoleData = new DisasterData();
+                    floodedSinkHoleData.m_targetPosition = data.m_middlePosition;
+                    floodedSinkHoleData.m_intensity = (byte)instance.m_randomizer.Int32(100u);
+                    */
                     Vector3 min = data.m_bounds.min;
                     Vector3 max = data.m_bounds.max;
                     RoadBaseAI.FloodParkedCars(min.x, min.z, max.x, max.z);
@@ -328,5 +332,6 @@ namespace Rainfall
             data.m_problems = problem;
 
         }
+        
     }
 }

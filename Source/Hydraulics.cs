@@ -44,8 +44,8 @@ namespace Rainfall
         private HashSet<ushort> _removeSDoutlets;
         private HashSet<ushort> _removeSDdetentionBasins;
         public  HashSet<ushort> _previousFacilityWaterSources;
-       
 
+        private string[] _drainageGroups;
         public Hydraulics()
         {
         }
@@ -93,10 +93,12 @@ namespace Rainfall
             _simulationTimeCount = 0f;
             _relocateDelay = 0f;
             _infiltrationPeriod = 1f;
+            _drainageGroups = new string[_capacity];
             created = true;
             base.OnCreated(threading);
         }
 
+        
         public override void OnBeforeSimulationTick()
         {
             if (terminated) return;
@@ -106,7 +108,8 @@ namespace Rainfall
             if (!loaded) return;
 
             if (!_buildingManager.m_buildingsUpdated) return;
-          
+            
+            
 
             for (int i = 0; i < _buildingManager.m_updatedBuildings.Length; i++)
             {
@@ -172,9 +175,10 @@ namespace Rainfall
             }
             base.OnBeforeSimulationTick();
         }
-
+        
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
+          
             if (terminated)
                 return;
 
@@ -232,6 +236,7 @@ namespace Rainfall
                                 */
                                 _SDoutlets.Add(id);
                                 _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
+                                _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
                                 if (currentBuilding.m_waterSource != 0)
                                     _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
                                 //Debug.Log("[RF].Hydraulics Added Outlet " + id.ToString() + " to district " + _districts[id]);
@@ -241,6 +246,7 @@ namespace Rainfall
 
                                 _SDinlets.Add(id);
                                 _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
+                                _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
                                 if (currentBuilding.m_waterSource != 0)
                                     _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
                                 //Debug.Log("[RF].Hydraulics Added Inlet " + id.ToString() + " to district " + _districts[id]);
@@ -251,6 +257,7 @@ namespace Rainfall
 
                                 _SDdetentionBasins.Add(id);
                                 _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
+                                _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
                                 //Debug.Log("[RF].Hydraulics Added detention basin " + id.ToString() + " to district " + _districts[id]);
                             }
                         }
@@ -289,7 +296,8 @@ namespace Rainfall
                                     currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.Shoreline;
                             }*/
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
-                         
+                            _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
+
                         }
                         else
                             _removeSDinlets.Add(id);
@@ -319,7 +327,8 @@ namespace Rainfall
                             }
                             */
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
-                          
+                            _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
+
                         }
                         else
                             _removeSDoutlets.Add(id);
@@ -340,6 +349,7 @@ namespace Rainfall
                         if (currentStormDrainAi.m_stormWaterDetention != 0)
                         {
                             _districts[id] = _districtManager.GetDistrict(currentBuilding.m_position);
+                            _drainageGroups[id] = _buildingManager.GetBuildingName(id, InstanceID.Empty);
                             /*if (currentBuilding.Info.m_placementMode != BuildingInfo.PlacementMode.OnGround)
                             {
                                 currentBuilding.Info.m_placementMode = BuildingInfo.PlacementMode.OnGround;
@@ -367,17 +377,20 @@ namespace Rainfall
                     //Debug.Log("[RF].Hydraulics Removed inlet " + id.ToString());
                     _stormwaterAccumulation[id] = 0;
                     _districts[id] = (byte) 0;
+                    _drainageGroups[id] = String.Empty;
                 }
                 foreach (ushort id in _removeSDoutlets)
                 {
                     _SDoutlets.Remove(id);
                     //Debug.Log("[RF].Hydraulics Removed outlet " + id.ToString());
                     _districts[id] = (byte)0;
+                    _drainageGroups[id] = String.Empty;
                 }
                 foreach (ushort id in _removeSDdetentionBasins)
                 {
                     _SDdetentionBasins.Remove(id);
                     _districts[id] = (byte)0;
+                    _drainageGroups[id] = String.Empty;
                 }
                 _removeSDinlets.Clear();
                 _removeSDoutlets.Clear();
@@ -632,58 +645,64 @@ namespace Rainfall
             }
         }
 
-        public static int getDistrictStormwaterAccumulation(byte district)
+       
+        public static int getAreaStormwaterAccumulation(int buildingID)
         {
-            int districtStormwaterAccumulation = 0;
+            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
+            
+            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)buildingID, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)buildingID, InstanceID.Empty)) {
+                overrideDistrictControl = true;
+            }
+            
+            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
+            int areaStormwaterAccumulation = 0;
 
             foreach (ushort id in Hydraulics.instance._SDinlets)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (   ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption 
+                    || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district 
+                    || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                    || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                    || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
-                    districtStormwaterAccumulation += Hydraulics.instance._stormwaterAccumulation[id];
+                    areaStormwaterAccumulation += Hydraulics.instance._stormwaterAccumulation[id];
                 }
+                        
+
 
             }
-
-            /*if (ModSettings.EasyMode == true)
+            return areaStormwaterAccumulation;
+        }
+        public static int getAreaOutletCapacity(int BuildingId)
+        {
+            Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
             {
-                Debug.Log("[RF].Hydraulics.getDistrictSWA EAsy mode");
-                HashSet<ushort> buildingList = Hydrology.getBuildingList();
-                foreach (ushort id in buildingList)
-                {
-                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
-                    {
-                        districtStormwaterAccumulation += Hydraulics.instance._easyModeSWA[id];
-                    }
-
-                }
-            }*/
-            
-            //Debug.Log("[RF].Hydraulics Stormwater Accumulation at District " + district.ToString() + " is " + districtStormwaterAccumulation);
-            return districtStormwaterAccumulation;
-        }
-        public static int getDistrictStormwaterAccumulation(int BuildingId)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictStormwaterAccumulation(district);
-        }
-        public static int getDistrictOutletCapacity(byte district)
-        {
-            int districtOutletCapacity = 0;
+                overrideDistrictControl = true;
+            }
+            int areaOutletCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDoutlets)
             {
-                
-                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
-                    {
-                        Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
+
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
+                {
+                    Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                         StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                         if (currentBuildingAI != null)
                         {
                             if (currentBuildingAI.m_stormWaterOutlet != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
                             {
-                                districtOutletCapacity += currentBuildingAI.m_stormWaterOutlet;
+                                areaOutletCapacity += currentBuildingAI.m_stormWaterOutlet;
                             }
                         }
                     }
@@ -691,21 +710,27 @@ namespace Rainfall
 
             }
             //Debug.Log("[RF].Hydraulics Stormdrain Capacity at District " + district.ToString() + " is " + districtOutletCapacity);
-            return districtOutletCapacity;
+            return areaOutletCapacity;
         }
-        public static int getDistrictOutletCapacity(int BuildingId)
+       
+        public static int getAreaInletCapacity(int BuildingId)
         {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictOutletCapacity(district);
-        }
-        public static int getDistrictInletCapacity(byte district)
-        {
-            int districtInletCapacity = 0;
+            Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+            int areaInletCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDinlets)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
@@ -713,29 +738,35 @@ namespace Rainfall
                     {
                         if (currentBuildingAI.m_stormWaterIntake != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
                         {
-                            districtInletCapacity += currentBuildingAI.m_stormWaterIntake;
+                            areaInletCapacity += currentBuildingAI.m_stormWaterIntake;
                         }
                     }
                 }
 
             }
             //Debug.Log("[RF].Hydraulics Stormdrain Capacity at District " + district.ToString() + " is " + districtOutletCapacity);
-            return districtInletCapacity;
+            return areaInletCapacity;
         }
-        public static int getDistrictInletCapacity(int BuildingId)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictInletCapacity(district);
-        }
+        
 
-        public static int getDistrictDetentionCapacity(byte district)
+        public static int getAreaDetentionCapacity(int BuildingId)
         {
-            int districtDetentionCapacity = 0;
+            Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+            int areaDetentionCapacity = 0;
             foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+               || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
@@ -743,28 +774,34 @@ namespace Rainfall
                     {
                         if (currentBuildingAI.m_stormWaterDetention != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
                         {
-                            districtDetentionCapacity += currentBuildingAI.m_stormWaterDetention;
+                            areaDetentionCapacity += currentBuildingAI.m_stormWaterDetention;
                         }
                     }
                 }
 
             }
             //Debug.Log("[RF].Hydraulics Stormdrain detention capacity at District " + district.ToString() + " is " + districtDetentionCapacity);
-            return districtDetentionCapacity;
+            return areaDetentionCapacity;
         }
-        public static int getDistrictDetentionCapacity(int BuildingId)
+       
+        public static int getAreaDetainedStormwater(int BuildingId)
         {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictDetentionCapacity(district);
-        }
-        public static int getDistrictDetainedStormwater(byte district)
-        {
-            int districtDetainedStormwater = 0;
+            Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+            int areaDetainedStormwater = 0;
             foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+               || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+               || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
@@ -775,33 +812,36 @@ namespace Rainfall
                         bool flag3 = (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
                         if (flag1 && flag2)
                         {
-                            districtDetainedStormwater += Hydraulics.getDetainedStormwater(id);
+                            areaDetainedStormwater += Hydraulics.getDetainedStormwater(id);
                         }
                     }
                 }
 
             }
             //Debug.Log("[RF].Hydraulics Stormdrain Capacity at District " + district.ToString() + " is " + districtOutletCapacity);
-            return districtDetainedStormwater;
+            return areaDetainedStormwater;
         }
-        public static int getDistrictDetainedStormwater(int BuildingId)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictDetainedStormwater(district);
-        }
+      
         public static bool checkGravityFlowForInlet(int inletId)
         {
             Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletId];
-        
-       
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)inletId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)inletId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
             if (Hydraulics.instance._SDoutlets.Count > 0 || Hydraulics.instance._SDdetentionBasins.Count > 0)
             {
                 foreach (ushort id in Hydraulics.instance._SDoutlets)
                 {
-                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                    if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                     {
 
                         Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
@@ -832,7 +872,11 @@ namespace Rainfall
                 }
                 foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
                 {
-                    if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                    if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                     {
                         Building currentDetentionBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                         StormDrainAI currentDetentionBasinAI = currentDetentionBasin.Info.m_buildingAI as StormDrainAI;
@@ -874,8 +918,19 @@ namespace Rainfall
         public static bool checkGravityFlowForInlet(int inletId, int outletId)
         {
             Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletId];
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)inletId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)inletId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
-            if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[outletId] == district || ModSettings.DistrictControl == false)
+            if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[outletId] == district
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[outletId] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[outletId] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[outletId] == district)
             {
                 Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletId];
                 StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
@@ -919,11 +974,21 @@ namespace Rainfall
         {
             int outletCapacity = 0;
             Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletID];
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)inletID, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)inletID, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
 
             foreach (ushort id in Hydraulics.instance._SDoutlets)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
@@ -947,11 +1012,21 @@ namespace Rainfall
             float outletElev = 999999f;
             ushort outletID = 0;
             Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletID];
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)inletID, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)inletID, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentInlet.m_position);
 
             foreach (ushort id in Hydraulics.instance._SDoutlets)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
@@ -975,7 +1050,11 @@ namespace Rainfall
             }
             foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBasinAI = currentBasin.Info.m_buildingAI as StormDrainAI;
@@ -1005,10 +1084,20 @@ namespace Rainfall
             int stormwaterAccumulation = 0;
             Building currentOutlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletID];
             StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)outletID, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)outletID, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
             byte district = Hydraulics.instance._districtManager.GetDistrict(currentOutlet.m_position);
             foreach (ushort inletId in Hydraulics.instance._SDinlets)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[inletId] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[inletId] == district
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[inletId] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[inletId] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[inletId] == district)
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[inletId];
                     StormDrainAI currentInletAI = currentInlet.Info.m_buildingAI as StormDrainAI;
@@ -1041,11 +1130,19 @@ namespace Rainfall
             }*/
             return stormwaterAccumulation;
         }
-        public static int removeDistrictStormwaterAccumulation(byte district, int amount, int outletID, bool checkGravityFlow)
+        public static int removeAreaStormwaterAccumulation(int amount, int outletID, bool checkGravityFlow)
         {
-            int districtStormwaterAccumulation = Hydraulics.getDistrictStormwaterAccumulation(district);
+            int districtStormwaterAccumulation = Hydraulics.getAreaStormwaterAccumulation(outletID);
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)outletID, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)outletID, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
+            
             int minimumStormwaterAccumulation = amount;
             Building outletBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletID];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(outletBuilding.m_position);
             if ((outletBuilding.m_problems & Notification.Problem.TurnedOff) != Notification.Problem.None)
                 return 0;
 
@@ -1079,9 +1176,11 @@ namespace Rainfall
                 foreach (ushort id in Hydraulics.instance._SDinlets)
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    bool flag1 = Hydraulics.instance._districts[id] == district;
-                    if (ModSettings.DistrictControl == false)
-                        flag1 = true;
+                    bool flag1 = (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                       || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district);
                     bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
                     bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
                     bool flag4;
@@ -1167,7 +1266,11 @@ namespace Rainfall
                 foreach (ushort id in Hydraulics.instance._SDinlets)
                 {
                     Building currentInlet = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    bool flag1 = (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false);
+                    bool flag1 = (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district);
                     bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
                     bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
                     bool flag4;
@@ -1314,13 +1417,7 @@ namespace Rainfall
             return amount;
         }
         
-        public static int removeDistrictStormwaterAccumulation(int BuildingId, int amount, int outletID, bool checkGravityFlow)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return removeDistrictStormwaterAccumulation(district, amount, outletID, checkGravityFlow);
-        }
+       
         
         public bool reviewID(int id)
         {
@@ -1359,27 +1456,34 @@ namespace Rainfall
             return Hydraulics.instance._hydraulicRate[id];
         }
         
-        public static int getDistrictHydraulicRate(byte district, HashSet<ushort> structures)
+        public static int getDistrictHydraulicRate(int BuildingId, HashSet<ushort> structures)
         {
-            int districtHydraulicRate = 0;
+            int areaHydraulicRate = 0;
+           string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+                if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
+                {
+                     overrideDistrictControl = true;
+                }
+            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
             foreach (ushort id in structures)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                         || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
-                    districtHydraulicRate += Hydraulics.instance._hydraulicRate[id];
+                    areaHydraulicRate += Hydraulics.instance._hydraulicRate[id];
                 }
 
             }
             //Debug.Log("[RF].Hydraulics HydraulicRate  at District " + district.ToString() + " is " + districtHydraulicRate);
-            return districtHydraulicRate;
+            return areaHydraulicRate;
         }
-        public static int getDistrictHydraulicRate(int BuildingId, HashSet<ushort> structures)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictHydraulicRate(district, structures);
-        }
+      
         public static HashSet<ushort> getInletList()
         {
             return Hydraulics.instance._SDinlets;
@@ -1405,29 +1509,35 @@ namespace Rainfall
             return Hydraulics.instance._variableCapacity[id];
         }
 
-        public static int getDistrictVariableCapacity(byte district, HashSet<ushort> structures)
+        public static int getAreaVariableCapacity(int BuildingId, HashSet<ushort> structures)
         {
-            int districtVariableCapacity = 0;
+            Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
+            byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
+            int areaVariableCapacity = 0;
+            string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
+            bool overrideDistrictControl = false;
+            if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
+            {
+                overrideDistrictControl = true;
+            }
             foreach (ushort id in structures)
             {
-                if (ModSettings.DistrictControl == true && Hydraulics.instance._districts[id] == district || ModSettings.DistrictControl == false)
+                if (ModSettings.StormDrainAssetControlOption == ModSettings._NoControlOption
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption && Hydraulics.instance._districts[id] == district
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                        || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     if ((currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
-                        districtVariableCapacity += Hydraulics.instance._variableCapacity[id];
+                        areaVariableCapacity += Hydraulics.instance._variableCapacity[id];
                 }
 
             }
             //Debug.Log("[RF].Hydraulics VariableCapacity  at District " + district.ToString() + " is " + districtVariableCapacity);
-            return districtVariableCapacity;
+            return areaVariableCapacity;
         }
-        public static int getDistrictVariableCapacity(int BuildingId, HashSet<ushort> structures)
-        {
-            Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
-            byte district = Hydraulics.instance._districtManager.GetDistrict(currentBuilding.m_position);
-            //Debug.Log("[RF].Hydraulics Building " + BuildingId.ToString() + " is in district " + district.ToString());
-            return getDistrictVariableCapacity(district, structures);
-        }
+        
         public static float getDetentionBasinWSE(int buildingID)
         {
             Building currentDetentionBasin = Hydraulics.instance._buildingManager.m_buildings.m_buffer[buildingID];
@@ -1469,5 +1579,27 @@ namespace Rainfall
             return removed;
         }
         
+        public static void deleteAllAssets()
+        {
+            foreach (ushort id in Hydraulics.instance._SDinlets)
+            {
+                Hydraulics.instance._buildingManager.ReleaseBuilding(id);
+            }
+            Hydraulics.instance._SDinlets.Clear();
+            foreach (ushort id in Hydraulics.instance._SDoutlets)
+            {
+                Hydraulics.instance._buildingManager.ReleaseBuilding(id);
+            }
+            Hydraulics.instance._SDoutlets.Clear();
+            foreach (ushort id in Hydraulics.instance._SDdetentionBasins)
+            {
+                Hydraulics.instance._buildingManager.ReleaseBuilding(id);
+            }
+            Hydraulics.instance._SDdetentionBasins.Clear();
+            
+        }
+
+        
+       
     }
 }

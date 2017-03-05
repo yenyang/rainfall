@@ -421,8 +421,8 @@ namespace Rainfall
             }
             return false;
         }
-
-
+   
+        /*
         private static bool _districtControl;
         private static int? _districtControlInt;
         public static bool DistrictControl
@@ -458,7 +458,7 @@ namespace Rainfall
 
             }
         }
-
+        */
         private static int? _buildingFloodingTolerance;
         public const int _defaultBuildingFloodingTolerance = 50;
         public const int _minFloodTolerance = 0;
@@ -566,6 +566,58 @@ namespace Rainfall
             }
         }
 
+        private static int? _pedestrianPathFloodingTolerance;
+        public const int _defaultPedestrianPathFloodingTolerance = 50;
+
+        public static int PedestrianPathFloodingTolerance
+        {
+            get
+            {
+                if (!_pedestrianPathFloodingTolerance.HasValue)
+                {
+                    _pedestrianPathFloodingTolerance = PlayerPrefs.GetInt("RF_PedestrianPathFloodingTolerance", (int)_defaultPedestrianPathFloodingTolerance);
+                }
+                return _pedestrianPathFloodingTolerance.Value;
+            }
+            set
+            {
+                if (value >= _pedestrianPathFloodedTolerance || value < _minFloodTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _pedestrianPathFloodingTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_PedestrianPathFloodingTolerance", value);
+                _pedestrianPathFloodingTolerance = value;
+            }
+        }
+
+        private static int? _pedestrianPathFloodedTolerance;
+        public const int _defaultPedestrianPathFloodedTolerance = 100;
+
+        public static int PedestrianPathFloodedTolerance
+        {
+            get
+            {
+                if (!_pedestrianPathFloodedTolerance.HasValue)
+                {
+                    _pedestrianPathFloodedTolerance = PlayerPrefs.GetInt("RF_PedestrianPathFloodedTolerance", (int)_defaultPedestrianPathFloodedTolerance);
+                }
+                return _pedestrianPathFloodedTolerance.Value;
+            }
+            set
+            {
+                if (value > _maxFloodTolerance || value <= _pedestrianPathFloodingTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _pedestrianPathFloodedTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_PedestrianPathFloodedTolerance", value);
+                _pedestrianPathFloodedTolerance = value;
+            }
+        }
+
         private static bool _freezeLandvalues;
         private static int? _freezeLandvaluesInt;
         public static bool FreezeLandvalues
@@ -621,7 +673,31 @@ namespace Rainfall
             set
             {
                 PlayerPrefs.SetInt("RF_GravityDrainageOption", value);
-                _previousStormOption = value;
+                _gravityDrainageOption = value;
+            }
+        }
+
+        private static int? _stormDrainAssetControlOption;
+        public const int _NoControlOption = 0;
+        public const int _DistrictControlOption = 1;
+        public const int _IDControlOption = 2;
+        public const int _IDOverrideOption = 3;
+        private const int _defaultStormDrainAssetControlOption = _IDOverrideOption;
+
+        public static int StormDrainAssetControlOption
+        {
+            get
+            {
+                if (_stormDrainAssetControlOption == null)
+                {
+                    _stormDrainAssetControlOption = PlayerPrefs.GetInt("RF_StormDrainAssetControlOption", _defaultStormDrainAssetControlOption);
+                }
+                return (int)_stormDrainAssetControlOption;
+            }
+            set
+            {
+                PlayerPrefs.SetInt("RF_StormDrainAssetControlOption", value);
+                _stormDrainAssetControlOption = value;
             }
         }
 
@@ -697,6 +773,7 @@ namespace Rainfall
 
             }
         }
+        /*
         private static bool _improvedInletMechanics;
         private static int? _improvedInletMechanicsInt;
         public static bool ImprovedInletMechanics
@@ -732,6 +809,7 @@ namespace Rainfall
 
             }
         }
+        */
         private static bool _preventRainBeforeMilestone;
         private static int? _preventRainBeforeMilestoneInt;
         public static bool PreventRainBeforeMilestone
@@ -781,17 +859,20 @@ namespace Rainfall
             ModSettings.MinimumStormDuration = (int)ModSettings._minStormDuration;
             ModSettings.MaximumStormDuration = (int)ModSettings._maxStormDuration;
             ModSettings.MaximumStormIntensity = (int)ModSettings._maxStormIntensity;
-            ModSettings.DistrictControl = true;
+            //ModSettings.DistrictControl = true;
             ModSettings.BuildingFloodedTolerance = _defaultBuildingFloodedTolerance;
             ModSettings.BuildingFloodingTolerance = _defaultBuildingFloodingTolerance;
             ModSettings.RoadwayFloodedTolerance = _defaultRoadwayFloodedTolerance;
             ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
+            ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
+            ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
             ModSettings.FreezeLandvalues = true;
             //ModSettings.EasyMode = false;
             ModSettings.SimulatePollution = true;
             ModSettings.PreventRainBeforeMilestone = true;
             ModSettings.GravityDrainageOption = _defaultGravityDrainageOption;
-            ModSettings.ImprovedInletMechanics = true;
+            ModSettings.StormDrainAssetControlOption = _defaultStormDrainAssetControlOption;
+            //ModSettings.ImprovedInletMechanics = true;
             foreach (KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
             {
                 setRunoffCoefficient(pair.Key, DefaultRunoffCoefficients[pair.Key]);

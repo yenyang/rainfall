@@ -215,11 +215,7 @@ namespace Rainfall
 
         protected override bool CanSufferFromFlood( out bool onlyCollapse)
         {
-            if (this.m_info.m_placementMode == BuildingInfo.PlacementMode.OnGround || this.m_info.m_placementMode == BuildingInfo.PlacementMode.Roadside)
-            {
-                onlyCollapse = true;
-                return true;
-            }
+            
             onlyCollapse = false;
             return false;
         }
