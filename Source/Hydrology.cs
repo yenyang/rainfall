@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
+using System.Threading;
 
 namespace Rainfall
 {
@@ -18,9 +19,9 @@ namespace Rainfall
         public bool isRaining;
         System.Random random = new System.Random();
 
-        private HashSet<ushort> _buildingIDs;
-        private HashSet<ushort> _newBuildingIDs;
-        private HashSet<ushort> _removeBuildingIDs;
+        public HashSet<ushort> _buildingIDs;
+        public HashSet<ushort> _newBuildingIDs;
+        public HashSet<ushort> _removeBuildingIDs;
 
         private HashSet<WaterSource> _waterSources;
         private ushort[] _waterSourceIDs;
@@ -51,7 +52,7 @@ namespace Rainfall
         private string forecasterChannel;
         public int[] _preRainfallLandvalues;
         private string rainUnlockMilestone = "Milestone3";
-        private uint waterSourceMaxQuantitiy = 100000000u;
+        private uint waterSourceMaxQuantitiy = 8000000u;
         public bool cleanUpCycle = false;
         public bool endStorm = false;
 
@@ -165,7 +166,7 @@ namespace Rainfall
                 improvedSimulation = false;
                 Debug.Log("[RF]Hydrology Before Tick Storm Ended Depth or Intensity <= 0");
             }
-
+            /*
             if (!_buildingManager.m_buildingsUpdated) return;
             //Debug.Log("[RF].Hydrology  before tick & building Updated");
 
@@ -195,6 +196,7 @@ namespace Rainfall
                     }
                 }
             }
+            */
             if (endStorm == true)
             {
                 improvedSimulation = false;
@@ -255,6 +257,13 @@ namespace Rainfall
                     if (reviewBuilding(id))
                     {
                         _buildingIDs.Add(id);
+                        if (ModSettings.IncreaseExistingVanillaPadsOnLoad == true)
+                        {
+                            Building currentBuilding = _buildingManager.m_buildings.m_buffer[id];
+                            if ((currentBuilding.m_flags & Building.Flags.FixedHeight) == Building.Flags.None) {
+                                elevateBuildingPad(id);
+                            }
+                        }
                         //Debug.Log("[RF].Hydrology  Added " + id.ToString() + " to _buildingID");
                     }
                 }
@@ -303,10 +312,28 @@ namespace Rainfall
             }
             if (_weatherManager.m_currentRain == 0 && isRaining == false)
             {
-                foreach (ushort id in _newBuildingIDs)
+                if (_newBuildingIDs.Count > 0)
                 {
-                    _buildingIDs.Add(id);
-                   // Debug.Log("[RF].Hydrology  Moved _newBuildingID " + id.ToString() + " to _buildingID");
+                    HashSet<ushort> _newBuildingIDsIterator = new HashSet<ushort>(_newBuildingIDs);
+
+                    //Debug.Log("[RF].Hydrology newBuildingIds.count = " + _newBuildingIDs.Count.ToString());
+                    //Debug.Log("[RF].Hydrology newBuildingsIDSIterator.count = " + _newBuildingIDsIterator.Count.ToString());
+                   
+                    _newBuildingIDs.Clear();
+                    foreach (ushort id in _newBuildingIDsIterator)
+                    {
+                       
+                        if (reviewBuilding(id))
+                        {
+
+                            _buildingIDs.Add(id);
+                            //Debug.Log("[RF].Hydrology  Moved _newBuildingID " + id.ToString() + " to _buildingID");
+                            elevateBuildingPad(id);
+                        }
+
+                    }
+                    //Debug.Log("[RF].Hydrology newBuildingIds.count = " + _newBuildingIDs.Count.ToString());
+                    //Debug.Log("[RF].Hydrology newBuildingsIDSIterator.count = " + _newBuildingIDsIterator.Count.ToString());
                 }
               
                 foreach (ushort id in _buildingIDs)
@@ -317,13 +344,22 @@ namespace Rainfall
                         //Debug.Log("[RF].Hydrology  Removed _BuildingID " + id.ToString() + " because !reviewed");
                     }
                 }
-                foreach (ushort id in _removeBuildingIDs)
+                if (_removeBuildingIDs.Count > 0)
                 {
-                    _buildingIDs.Remove(id);
-                    //Debug.Log("[RF].Hydrology  ReMoved _BuildingID " + id.ToString());
+                    HashSet<ushort> _removeBuildingIDsIterator = new HashSet<ushort>(_removeBuildingIDs);
+                    //Debug.Log("[RF].Hydrology removeBuildingIds.count = " + _removeBuildingIDs.Count.ToString());
+                    //Debug.Log("[RF].Hydrology RemovedBuildingsIDSIterator.count = " + _removeBuildingIDsIterator.Count.ToString());
+                   
+                    _removeBuildingIDs.Clear();
+                    foreach (ushort id in _removeBuildingIDsIterator)
+                    {
+                        
+                        _buildingIDs.Remove(id);
+                        //Debug.Log("[RF].Hydrology  ReMoved _BuildingID " + id.ToString());
+                    }
+                    //Debug.Log("[RF].Hydrology removeBuildingIds.count = " + _removeBuildingIDs.Count.ToString());
+                    //.Log("[RF].Hydrology RemovedBuildingsIDSIterator.count = " + _removeBuildingIDsIterator.Count.ToString());
                 }
-                _newBuildingIDs.Clear();
-                _removeBuildingIDs.Clear();
                 if (cleanUpCycle == true)
                 {
                     _weatherManager.m_targetRain = 1;
@@ -569,23 +605,26 @@ namespace Rainfall
                 }
 
                 //Debug.Log("[RF].Hydrology  is raining ");
-                foreach (ushort id in _newBuildingIDs)
+                HashSet<ushort> _newBuildingIDsIterator = _newBuildingIDs;
+                _newBuildingIDs.Clear();
+                foreach (ushort id in _newBuildingIDsIterator)
                 {
                     _buildingIDs.Add(id);
+                    elevateBuildingPad(id);
                     if (calculateFlowRate(id, _weatherManager.m_currentRain) > 0u)
                     {
                         _waterSources.Add(newWaterSourceAtBuidling(id));
                         //Debug.Log("[RF].Hydrology  Added Water for building " + id.ToString() + " in _newBuildingID");
                     }
                 }
-                _newBuildingIDs.Clear();
-                foreach (ushort id in _removeBuildingIDs)
+                HashSet<ushort> _removeBuildingIDsIterator = _removeBuildingIDs;
+                _removeBuildingIDs.Clear();
+                foreach (ushort id in _removeBuildingIDsIterator)
                 {
                     removeWaterSourceAtBuilding(id);
                     _buildingIDs.Remove(id);
                     //Debug.Log("[RF].Hydrology  Removed Water for building " + id.ToString() + " from _removeBuildingID");
                 }
-                _removeBuildingIDs.Clear();
 
                 //Debug.Log("[RF].Hydrology Finished Chunks = " + finishedChunks.ToString() + " _realTimeCount = " + _realTimeCount.ToString());
                 while (finishedChunks+1 < _realTimeCount)
@@ -887,9 +926,20 @@ namespace Rainfall
         {
             if (id <= _capacity)
             {
-                _waterSimulation.ReleaseWaterSource(_waterSourceIDs[id]);
-                _waterSources.Remove(_waterSimulation.m_waterSources.m_buffer[_waterSourceIDs[id]]);
-                _waterSourceIDs[id] = 0;
+
+                try {
+                    _waterSimulation.ReleaseWaterSource(_waterSourceIDs[id]);
+                    
+                } catch (Exception e)
+                {
+                    Debug.Log("Tried to remove _waterSourceIDs " + id.ToString() + " but encountered exception " + e.ToString());
+
+                }
+                finally
+                {
+                    _waterSources.Remove(_waterSimulation.m_waterSources.m_buffer[_waterSourceIDs[id]]);
+                    _waterSourceIDs[id] = 0;
+                }
             } else
             {
                 Debug.Log("[RF].Hydrology  ID is larger than Capacity. Cannot remove source at building " + id.ToString() + " Capacity is " + _capacity.ToString());
@@ -1237,5 +1287,116 @@ namespace Rainfall
         {
             return Hydrology.instance._buildingIDs;
         }
+        private void RelocateBuilding(ushort building, ref Building data, Vector3 position, float angle)
+        {
+            BuildingInfo info = data.Info;
+            RemoveFromGrid(building, ref data);
+            if (info.m_hasParkingSpaces != VehicleInfo.VehicleType.None)
+            {
+                BuildingManager.instance.UpdateParkingSpaces(building, ref data);
+            }
+            data.m_position = position;
+            data.m_angle = angle;
+
+            AddToGrid(building, ref data);
+            data.CalculateBuilding(building);
+            BuildingManager.instance.UpdateBuildingRenderer(building, true);
+        }
+
+        private static void AddToGrid(ushort building, ref Building data)
+        {
+            int num = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
+            int num2 = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
+            int num3 = num2 * 270 + num;
+            while (!Monitor.TryEnter(BuildingManager.instance.m_buildingGrid, SimulationManager.SYNCHRONIZE_TIMEOUT))
+            {
+            }
+            try
+            {
+                BuildingManager.instance.m_buildings.m_buffer[(int)building].m_nextGridBuilding = BuildingManager.instance.m_buildingGrid[num3];
+                BuildingManager.instance.m_buildingGrid[num3] = building;
+            }
+            finally
+            {
+                Monitor.Exit(BuildingManager.instance.m_buildingGrid);
+            }
+        }
+
+        private static void RemoveFromGrid(ushort building, ref Building data)
+        {
+            BuildingManager buildingManager = BuildingManager.instance;
+
+            BuildingInfo info = data.Info;
+            int num = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
+            int num2 = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
+            int num3 = num2 * 270 + num;
+            while (!Monitor.TryEnter(buildingManager.m_buildingGrid, SimulationManager.SYNCHRONIZE_TIMEOUT))
+            {
+            }
+            try
+            {
+                ushort num4 = 0;
+                ushort num5 = buildingManager.m_buildingGrid[num3];
+                int num6 = 0;
+                while (num5 != 0)
+                {
+                    if (num5 == building)
+                    {
+                        if (num4 == 0)
+                        {
+                            buildingManager.m_buildingGrid[num3] = data.m_nextGridBuilding;
+                        }
+                        else
+                        {
+                            BuildingManager.instance.m_buildings.m_buffer[(int)num4].m_nextGridBuilding = data.m_nextGridBuilding;
+                        }
+                        break;
+                    }
+                    num4 = num5;
+                    num5 = BuildingManager.instance.m_buildings.m_buffer[(int)num5].m_nextGridBuilding;
+                    if (++num6 > 49152)
+                    {
+                        CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid list detected!\n" + Environment.StackTrace);
+                        break;
+                    }
+                }
+                data.m_nextGridBuilding = 0;
+            }
+            finally
+            {
+                Monitor.Exit(buildingManager.m_buildingGrid);
+            }
+            if (info != null)
+            {
+                Singleton<RenderManager>.instance.UpdateGroup(num * 45 / 270, num2 * 45 / 270, info.m_prefabDataLayer);
+            }
+        }
+        private void elevateBuildingPad(ushort id)
+        {
+            Building building = _buildingManager.m_buildings.m_buffer[id];
+            _buildingManager.m_buildings.m_buffer[id].m_flags = _buildingManager.m_buildings.m_buffer[id].m_flags | Building.Flags.FixedHeight;
+            Vector3 newPosition = building.m_position;
+            int miny;
+            int avgy;
+            int maxy;
+            _terrainManager.CalculateAreaHeight(newPosition.x- (float)building.Width/2f, newPosition.z-(float)building.Length/2f, newPosition.x+(float)building.Width/2f, newPosition.z+(float)building.Length/2f, out miny, out avgy, out maxy);
+            
+            //Debug.Log("[RF]Hydrology.elevateBuildingPad miny = " + ((float)miny/64f).ToString() + " avgy = " + ((float)avgy / 64f).ToString() + " maxy = " + ((float)maxy / 64f).ToString());
+            Vector3 sidewalkPosition = building.CalculateSidewalkPosition();
+            //Debug.Log("[RF]Hydrology.elevateBuildingPad sidewalkPosition = " + sidewalkPosition.y.ToString());
+            float differenceFromTerrainToSidewalk = sidewalkPosition.y - ((float)miny / 64f);
+            if (ModSettings.AdditionalIncreaseForLowerPads == false) {
+                differenceFromTerrainToSidewalk = 0;
+            }
+            //Debug.Log("[RF]Hydrology.elevateBuildingPad differenceFromSidewalk = " + differenceFromTerrainToSidewalk.ToString());
+
+            newPosition.y += Mathf.Clamp(Mathf.Max(((float)ModSettings.IncreaseBuildingPadHeight / 100f), differenceFromTerrainToSidewalk), 0, ModSettings.MaxBuildingPadHeight);
+          
+            //Debug.Log("[RF]Hydrology.onUpdate " + _buildingManager.m_buildings.m_buffer[id].m_flags.ToString());
+            //Debug.Log("[RF]Hydrology.onUpdate tried to elevate building " + id.ToString() + " from elevation " + _buildingManager.m_buildings.m_buffer[id].m_position.y.ToString() + " to elevation " + newPosition.y.ToString());
+            RelocateBuilding(id, ref _buildingManager.m_buildings.m_buffer[id], newPosition, _buildingManager.m_buildings.m_buffer[id].m_angle);
+            //Debug.Log("[RF]Hydrology.onUpdate building " + id.ToString() + " is at elevation " + _buildingManager.m_buildings.m_buffer[id].m_position.y.ToString());
+        }
+        
     }
 }

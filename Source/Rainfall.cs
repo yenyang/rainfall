@@ -44,6 +44,10 @@ namespace Rainfall
         public UISlider RoadwayFloodedToleranceSlider;
         public UISlider PedestrianPathFloodingToleranceSlider;
         public UISlider PedestrianPathFloodedToleranceSlider;
+        public UISlider IncreaseBuildingPadHeightSlider;
+        public UISlider MaxBuildingPadHeightSlider;
+        public UICheckBox AdditionalIncreaseForLowerPadsCheckBox;
+        public UICheckBox IncreaseExistingVanillaPadsOnLoadCheckbox;
         public UICheckBox FreezeLandvaluesCheckBox;
         //public UICheckBox ImprovedInletMechanicsCheckBox;
         public UICheckBox PreventRainBeforeMilestoneCheckBox;
@@ -83,25 +87,38 @@ namespace Rainfall
             RefreshRateSlider = group.AddSlider("Refresh Rate", 1f, (float)ModSettings._maxRefreshRate, 1f, (float)ModSettings.RefreshRate, OnRefreshRateChanged) as UISlider;
             RefreshRateSlider.tooltip = ModSettings.RefreshRate.ToString() + " seconds";
             RefreshRateSlider.width += 100;
-            BuildingFloodingToleranceSlider = group.AddSlider("Building Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodingTolerance, OnBuildingFloodingToleranceChanged) as UISlider;
+
+            UIHelperBase PadHeightGroup = helper.AddGroup("Building Pads Height Increases (Use Move It! to fine tune)");
+            IncreaseBuildingPadHeightSlider = PadHeightGroup.AddSlider("Min. Bldg. Pad Increase", ModSettings._minPadIncrease, ModSettings._maxPadIncrease, ModSettings._padIncreaseStep, (float)ModSettings.IncreaseBuildingPadHeight, OnIncreaseBuildingPadHeightChanged) as UISlider;
+            IncreaseBuildingPadHeightSlider.tooltip = ((float)ModSettings.IncreaseBuildingPadHeight / 100f).ToString() + " units";
+            IncreaseBuildingPadHeightSlider.width += 100;
+            AdditionalIncreaseForLowerPadsCheckBox = PadHeightGroup.AddCheckbox("Additional Increase For Lower Pads", ModSettings.AdditionalIncreaseForLowerPads, OnAdditionalIncreaseForLowerPadsCheckBoxChanged) as UICheckBox;
+            MaxBuildingPadHeightSlider = PadHeightGroup.AddSlider("Max. Bldg. Pad Increase", ModSettings._minPadIncrease, ModSettings._maxPadIncrease, ModSettings._padIncreaseStep, (float)ModSettings.MaxBuildingPadHeight, OnMaxBuildingPadHeightChanged) as UISlider;
+            MaxBuildingPadHeightSlider.tooltip = ((float)ModSettings.MaxBuildingPadHeight / 100f).ToString() + " units";
+            MaxBuildingPadHeightSlider.width += 100;
+            IncreaseExistingVanillaPadsOnLoadCheckbox = PadHeightGroup.AddCheckbox("Increase Existing Vanilla Pads on Load (Not Recommended)", ModSettings.IncreaseExistingVanillaPadsOnLoad, onIncreaseExistingVanillaPadsOnLoadCheckboxChanged) as UICheckBox;
+
+            UIHelperBase FloodingToleranceGroup = helper.AddGroup("Flooding Tolerances");
+            BuildingFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Building Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodingTolerance, OnBuildingFloodingToleranceChanged) as UISlider;
             BuildingFloodingToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodingTolerance / 100f).ToString() + " units";
             BuildingFloodingToleranceSlider.width += 100;
-            BuildingFloodedToleranceSlider = group.AddSlider("Building Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodedTolerance, OnBuildingFloodedToleranceChanged) as UISlider;
+            BuildingFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Building Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.BuildingFloodedTolerance, OnBuildingFloodedToleranceChanged) as UISlider;
             BuildingFloodedToleranceSlider.tooltip = ((float)ModSettings.BuildingFloodedTolerance/100f).ToString() + " units";
             BuildingFloodedToleranceSlider.width += 100;
-            RoadwayFloodingToleranceSlider = group.AddSlider("Roadway Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodingTolerance, OnRoadwayFloodingToleranceChanged) as UISlider;
+            RoadwayFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Roadway Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodingTolerance, OnRoadwayFloodingToleranceChanged) as UISlider;
             RoadwayFloodingToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodingTolerance / 100f).ToString() + " units";
             RoadwayFloodingToleranceSlider.width += 100;
-            RoadwayFloodedToleranceSlider = group.AddSlider("Roadway Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
+            RoadwayFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Roadway Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
             RoadwayFloodedToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodedTolerance / 100f).ToString() + " units";
             RoadwayFloodedToleranceSlider.width += 100;
 
-            PedestrianPathFloodingToleranceSlider = group.AddSlider("Ped. Path Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodingTolerance, OnPedestrianPathFloodingToleranceChanged) as UISlider;
+            PedestrianPathFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodingTolerance, OnPedestrianPathFloodingToleranceChanged) as UISlider;
             PedestrianPathFloodingToleranceSlider.tooltip = ((float)ModSettings.PedestrianPathFloodingTolerance / 100f).ToString() + " units";
             PedestrianPathFloodingToleranceSlider.width += 100;
-            PedestrianPathFloodedToleranceSlider = group.AddSlider("Ped. Path Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodedTolerance, OnPedestrianPathFloodedToleranceChanged) as UISlider;
+            PedestrianPathFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodedTolerance, OnPedestrianPathFloodedToleranceChanged) as UISlider;
             PedestrianPathFloodedToleranceSlider.tooltip = ((float)ModSettings.PedestrianPathFloodedTolerance / 100f).ToString() + " units";
             PedestrianPathFloodedToleranceSlider.width += 100;
+         
             UIHelperBase StormWaterSimulationGroup = helper.AddGroup("Stormwater Simulation Settings");
             AutomaticallyPickStormDistributionCheckBox = StormWaterSimulationGroup.AddCheckbox("Automatically Select Storm Distribution", ModSettings.AutomaticStormDistribution, OnAutomaticStormDistributionCheckBoxChanged) as UICheckBox;
             cityNames = getCityNamesDropDownOptions();
@@ -223,6 +240,32 @@ namespace Rainfall
             PedestrianPathFloodedToleranceSlider.tooltipBox.Show();
             PedestrianPathFloodedToleranceSlider.RefreshTooltip();
         }
+        private void OnIncreaseBuildingPadHeightChanged(float val)
+        {
+            if (val < ModSettings.MaxBuildingPadHeight)
+                ModSettings.IncreaseBuildingPadHeight = (int)val;
+            else
+            {
+                ModSettings.IncreaseBuildingPadHeight = ModSettings.MaxBuildingPadHeight - ModSettings._padIncreaseStep;
+                IncreaseBuildingPadHeightSlider.value = ModSettings.IncreaseBuildingPadHeight;
+            }
+            IncreaseBuildingPadHeightSlider.tooltip = ((float)ModSettings.IncreaseBuildingPadHeight / 100f).ToString() + " units";
+            IncreaseBuildingPadHeightSlider.tooltipBox.Show();
+            IncreaseBuildingPadHeightSlider.RefreshTooltip();
+        }
+        private void OnMaxBuildingPadHeightChanged(float val)
+        {
+            if (val > ModSettings.IncreaseBuildingPadHeight)
+                ModSettings.MaxBuildingPadHeight = (int)val;
+            else
+            {
+                ModSettings.MaxBuildingPadHeight = ModSettings.IncreaseBuildingPadHeight + ModSettings._padIncreaseStep;
+                MaxBuildingPadHeightSlider.value = ModSettings.MaxBuildingPadHeight;
+            }
+            MaxBuildingPadHeightSlider.tooltip = ((float)ModSettings.MaxBuildingPadHeight / 100f).ToString() + " units";
+            MaxBuildingPadHeightSlider.tooltipBox.Show();
+            MaxBuildingPadHeightSlider.RefreshTooltip();
+        }
         private void OnRefreshRateChanged(float val)
         {
             ModSettings.RefreshRate = (int)val;
@@ -234,6 +277,14 @@ namespace Rainfall
         private void OnChirpForecastCheckBoxChanged(bool val)
         {
             ModSettings.ChirpForecasts = (bool)val;
+        }
+        private void onIncreaseExistingVanillaPadsOnLoadCheckboxChanged(bool val)
+        {
+            ModSettings.IncreaseExistingVanillaPadsOnLoad = (bool)val;
+        }
+        private void OnAdditionalIncreaseForLowerPadsCheckBoxChanged(bool val)
+        {
+            ModSettings.AdditionalIncreaseForLowerPads = (bool)val;
         }
         private void OnSimulatePollutionCheckBoxChanged(bool val)
         {
@@ -471,6 +522,10 @@ namespace Rainfall
             StormDistributionDropDown.selectedIndex = ModSettings.StormDrainAssetControlOption;
             //EasyModeCheckBox.isChecked = ModSettings.EasyMode;
             SimulatePollutionCheckBox.isChecked = ModSettings.SimulatePollution;
+            IncreaseBuildingPadHeightSlider.value = ModSettings.IncreaseBuildingPadHeight;
+            MaxBuildingPadHeightSlider.value = ModSettings.MaxBuildingPadHeight;
+            AdditionalIncreaseForLowerPadsCheckBox.isChecked = ModSettings.AdditionalIncreaseForLowerPads;
+            IncreaseExistingVanillaPadsOnLoadCheckbox.isChecked = ModSettings.IncreaseExistingVanillaPadsOnLoad;
             foreach (OptionsItemBase sliderOIB in PublicBuildingsRunoffCoefficientSliders)
             {
                 OptionsRunoffCoefficientSlider sliderORCS = sliderOIB as OptionsRunoffCoefficientSlider;

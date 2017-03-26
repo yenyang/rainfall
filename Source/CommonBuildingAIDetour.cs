@@ -13,6 +13,7 @@ namespace Rainfall
         [RedirectMethod]
         new protected int HandleCommonConsumption(ushort buildingID, ref Building data, ref Building.Frame frameData, ref int electricityConsumption, ref int heatingConsumption, ref int waterConsumption, ref int sewageAccumulation, ref int garbageAccumulation, DistrictPolicies.Services policies)
         {
+            //Debug.Log("[RF]HandleCommonConsumption For building " + buildingID.ToString());
             int num = 100;
             DistrictManager instance = Singleton<DistrictManager>.instance;
             Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Electricity | Notification.Problem.Water | Notification.Problem.Sewage | Notification.Problem.Flood | Notification.Problem.Heating);
@@ -173,6 +174,7 @@ namespace Rainfall
             }
             bool flag5 = false;
             int num10 = sewageAccumulation;
+            //Debug.Log("[RF]CBAId @Water consumption");
             if (waterConsumption != 0)
             {
                 if ((policies & DistrictPolicies.Services.WaterSaving) != DistrictPolicies.Services.None)
@@ -347,6 +349,7 @@ namespace Rainfall
             {
                 data.m_waterProblemTimer = 0;
             }
+            //Debug.Log("[RF]CBAId garbage accumulation");
             if (garbageAccumulation != 0)
             {
                 int num23 = (int)(65535 - data.m_garbageBuffer);
@@ -354,24 +357,34 @@ namespace Rainfall
                 {
                     num = 0;
                     data.m_garbageBuffer = (ushort)num23;
+                    //Debug.Log("[RF]CBAId num23 = " + num23.ToString() + " garbage buffer " + data.m_garbageBuffer);
                 }
                 else
                 {
                     //start edit
+                    //Debug.Log("[RF]CBAId Start detoured code");
                     StormDrainAI stormDrainAI = data.Info.m_buildingAI as StormDrainAI;
+                    
                     if (stormDrainAI == null)
                         data.m_garbageBuffer += (ushort)garbageAccumulation;
                     else if (stormDrainAI.m_filter == false)
                         data.m_garbageBuffer += (ushort)garbageAccumulation;
-                    else
+
+                    else if ((data.m_problems & Notification.Problem.LineNotConnected) == Notification.Problem.None 
+                            && (data.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None
+                            && (data.m_problems & Notification.Problem.Electricity) == Notification.Problem.None)
                     {
+                        
                         int pollutantAccumulation = Hydraulics.removePollutants(buildingID, Hydraulics.getPollutants(buildingID));
                         data.m_garbageBuffer += (ushort)pollutantAccumulation;
-                        //Debug.Log("[RF]CommonBuildingAI.handleCommonConsumption garbagebuffer = " + data.m_garbageBuffer.ToString());
-                    }
+                        
+                            //Debug.Log("[RF]CommonBuildingAI.handleCommonConsumption garbagebuffer = " + data.m_garbageBuffer.ToString());
+                        }
                     //end edit
+                    //Debug.Log("[RF]CBAId end detoured code");
                 }
             }
+            //Debug.Log("[RF]CBAId after detoured code");
             if (garbageAccumulation != 0)
             {
                 int num24 = (int)data.m_garbageBuffer;
@@ -394,6 +407,7 @@ namespace Rainfall
                     }
                 }
             }
+            //Debug.Log("[RF]CBAId flood stuff");
             bool flag6;
             if (this.CanSufferFromFlood(out flag6))
             {
@@ -527,6 +541,7 @@ namespace Rainfall
             byte district = instance.GetDistrict(data.m_position);
             instance.m_districts.m_buffer[(int)district].AddUsageData(electricityUsage, heatingUsage, waterUsage, sewageUsage);
             data.m_problems = problem;
+            //Debug.Log("[RF]CBAId finished function");
             return num;
         }
     }

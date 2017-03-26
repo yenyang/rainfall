@@ -592,6 +592,96 @@ namespace Rainfall
             }
         }
 
+        private static int? _IncreaseBuildingPadHeight;
+        public const int _defaultIncreaseBuildingPadHeight = 50;
+        public const int _minPadIncrease = 0;
+        public const int _maxPadIncrease = 200;
+        public const int _padIncreaseStep = 10;
+
+        public static int IncreaseBuildingPadHeight
+        {
+            get
+            {
+                if (!_IncreaseBuildingPadHeight.HasValue)
+                {
+                    _IncreaseBuildingPadHeight = PlayerPrefs.GetInt("RF_IncreaseBuildingPadHeight", (int)_defaultIncreaseBuildingPadHeight);
+                }
+                return _IncreaseBuildingPadHeight.Value;
+            }
+            set
+            {
+                if (value > 200f || value < 0f)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _IncreaseBuildingPadHeight)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_IncreaseBuildingPadHeight", value);
+                _IncreaseBuildingPadHeight = value;
+            }
+
+        }
+        private static int? _MaxBuildingPadHeight;
+        public const int _defaultMaxBuildingPadHeight = _maxPadIncrease;
+
+        public static int MaxBuildingPadHeight
+        {
+            get
+            {
+                if (!_MaxBuildingPadHeight.HasValue)
+                {
+                    _MaxBuildingPadHeight = PlayerPrefs.GetInt("RF_MaxBuildingPadHeight", (int)_defaultMaxBuildingPadHeight);
+                }
+                return _MaxBuildingPadHeight.Value;
+            }
+            set
+            {
+                if (value > 200f || value < 0f)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _MaxBuildingPadHeight)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_MaxBuildingPadHeight", value);
+                _MaxBuildingPadHeight = value;
+            }
+        }
+        private static bool _IncreaseExistingVanillaPadsOnLoad;
+        private static int? _IncreaseExistingVanillaPadsOnLoadInt;
+        public static bool IncreaseExistingVanillaPadsOnLoad
+        {
+            get
+            {
+                if (_IncreaseExistingVanillaPadsOnLoadInt == null)
+                {
+                    _IncreaseExistingVanillaPadsOnLoadInt = PlayerPrefs.GetInt("RF_IncreaseExistingVanillaPadsOnLoad", 0);
+                }
+                if (_IncreaseExistingVanillaPadsOnLoadInt == 1)
+                {
+                    _IncreaseExistingVanillaPadsOnLoad = true;
+                }
+                else
+                {
+                    _IncreaseExistingVanillaPadsOnLoad = false;
+                }
+                return _IncreaseExistingVanillaPadsOnLoad;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _IncreaseExistingVanillaPadsOnLoadInt = 1;
+                }
+                else
+                {
+                    _IncreaseExistingVanillaPadsOnLoadInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_IncreaseExistingVanillaPadsOnLoad", (int)_IncreaseExistingVanillaPadsOnLoadInt);
+
+
+            }
+        }
+
         private static int? _pedestrianPathFloodedTolerance;
         public const int _defaultPedestrianPathFloodedTolerance = 100;
 
@@ -818,7 +908,7 @@ namespace Rainfall
             {
                 if (_preventRainBeforeMilestoneInt == null)
                 {
-                    _preventRainBeforeMilestoneInt = PlayerPrefs.GetInt("RF_SimulatePollution", 1);
+                    _preventRainBeforeMilestoneInt = PlayerPrefs.GetInt("RF_PreventRainBeforeMilestone", 1);
                 }
                 if (_preventRainBeforeMilestoneInt == 1)
                 {
@@ -845,6 +935,41 @@ namespace Rainfall
 
             }
         }
+        private static bool _AdditionalIncreaseForLowerPads;
+        private static int? _AdditionalIncreaseForLowerPadsInt;
+        public static bool AdditionalIncreaseForLowerPads
+        {
+            get
+            {
+                if (_AdditionalIncreaseForLowerPadsInt == null)
+                {
+                    _AdditionalIncreaseForLowerPadsInt = PlayerPrefs.GetInt("RF_AdditionalIncreaseForLowerPads", 1);
+                }
+                if (_AdditionalIncreaseForLowerPadsInt == 1)
+                {
+                    _AdditionalIncreaseForLowerPads = true;
+                }
+                else
+                {
+                    _AdditionalIncreaseForLowerPads = false;
+                }
+                return _AdditionalIncreaseForLowerPads;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _AdditionalIncreaseForLowerPadsInt = 1;
+                }
+                else
+                {
+                    _AdditionalIncreaseForLowerPadsInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_AdditionalIncreaseForLowerPads", (int)_AdditionalIncreaseForLowerPadsInt);
+
+
+            }
+        }
         public static void resetModSettings()
         {
             ModSettings.Difficulty = 100;
@@ -866,6 +991,10 @@ namespace Rainfall
             ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
             ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
             ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
+            ModSettings.IncreaseBuildingPadHeight = _defaultIncreaseBuildingPadHeight;
+            ModSettings.IncreaseExistingVanillaPadsOnLoad = false;
+            ModSettings.MaxBuildingPadHeight = _defaultMaxBuildingPadHeight;
+            ModSettings.AdditionalIncreaseForLowerPads = true;
             ModSettings.FreezeLandvalues = true;
             //ModSettings.EasyMode = false;
             ModSettings.SimulatePollution = true;

@@ -94,7 +94,16 @@ namespace Rainfall
             }
         }
 
-        
+        public override void CreateBuilding(ushort buildingID, ref Building data)
+        {
+            base.CreateBuilding(buildingID, ref data);
+            Hydraulics.addNaturalDrainageAsset(buildingID);
+        }
+        public override void ReleaseBuilding(ushort buildingID, ref Building data)
+        {
+            Hydraulics.removeNaturalDrainageAsset(buildingID);
+            base.ReleaseBuilding(buildingID, ref data);
+        }
 
         public override int GetWaterRate(ushort buildingID, ref Building data)
         {
