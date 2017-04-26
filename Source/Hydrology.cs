@@ -1376,21 +1376,35 @@ namespace Rainfall
             Building building = _buildingManager.m_buildings.m_buffer[id];
             _buildingManager.m_buildings.m_buffer[id].m_flags = _buildingManager.m_buildings.m_buffer[id].m_flags | Building.Flags.FixedHeight;
             Vector3 newPosition = building.m_position;
-            int miny;
-            int avgy;
-            int maxy;
-            _terrainManager.CalculateAreaHeight(newPosition.x- (float)building.Width/2f, newPosition.z-(float)building.Length/2f, newPosition.x+(float)building.Width/2f, newPosition.z+(float)building.Length/2f, out miny, out avgy, out maxy);
-            
+
             //Debug.Log("[RF]Hydrology.elevateBuildingPad miny = " + ((float)miny/64f).ToString() + " avgy = " + ((float)avgy / 64f).ToString() + " maxy = " + ((float)maxy / 64f).ToString());
+
+            Vector3 sidewalkPosition1 = Building.CalculateSidewalkPosition(building.m_position, building.m_angle, building.m_length, building.Width * 4, 0);
+            Vector3 sidewalkPosition2 = Building.CalculateSidewalkPosition(building.m_position, building.m_angle, building.m_length, -building.Width * 4, 0);
             Vector3 sidewalkPosition = building.CalculateSidewalkPosition();
-            //Debug.Log("[RF]Hydrology.elevateBuildingPad sidewalkPosition = " + sidewalkPosition.y.ToString());
-            float differenceFromTerrainToSidewalk = sidewalkPosition.y - ((float)miny / 64f);
+            Vector3[] positions = new Vector3[] { sidewalkPosition, sidewalkPosition1, sidewalkPosition2 };
+            float highestSidewalkPosition = 0;
+            foreach (Vector3 position in positions)
+            {
+                int miny;
+                int avgy;
+                int maxy;
+                _terrainManager.CalculateAreaHeight(position.x, position.y, position.x, position.y, out miny, out avgy, out maxy);
+                
+                if (maxy > highestSidewalkPosition)
+                    highestSidewalkPosition = (float)maxy/64f;
+                Debug.Log("[RF].Hydrology.ElevateBuildingPad currentSidewalkElevation = " + ((float)maxy/64f).ToString());
+            }
+
+
+           
+            float differenceFromTerrainToSidewalk = highestSidewalkPosition-building.m_position.y;
             if (ModSettings.AdditionalIncreaseForLowerPads == false) {
                 differenceFromTerrainToSidewalk = 0;
             }
-            //Debug.Log("[RF]Hydrology.elevateBuildingPad differenceFromSidewalk = " + differenceFromTerrainToSidewalk.ToString());
+            Debug.Log("[RF]Hydrology.elevateBuildingPad differenceFromSidewalk = " + differenceFromTerrainToSidewalk.ToString());
 
-            newPosition.y += Mathf.Clamp(Mathf.Max(((float)ModSettings.IncreaseBuildingPadHeight / 100f), differenceFromTerrainToSidewalk), 0, ModSettings.MaxBuildingPadHeight);
+            newPosition.y += Mathf.Clamp(Mathf.Max(((float)ModSettings.IncreaseBuildingPadHeight / 100f), differenceFromTerrainToSidewalk), (float)ModSettings.IncreaseBuildingPadHeight / 100f, ModSettings.MaxBuildingPadHeight);
           
             //Debug.Log("[RF]Hydrology.onUpdate " + _buildingManager.m_buildings.m_buffer[id].m_flags.ToString());
             //Debug.Log("[RF]Hydrology.onUpdate tried to elevate building " + id.ToString() + " from elevation " + _buildingManager.m_buildings.m_buffer[id].m_position.y.ToString() + " to elevation " + newPosition.y.ToString());

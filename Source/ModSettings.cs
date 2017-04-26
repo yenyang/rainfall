@@ -595,7 +595,7 @@ namespace Rainfall
         private static int? _IncreaseBuildingPadHeight;
         public const int _defaultIncreaseBuildingPadHeight = 50;
         public const int _minPadIncrease = 0;
-        public const int _maxPadIncrease = 200;
+        public const int _maxPadIncrease = 500;
         public const int _padIncreaseStep = 10;
 
         public static int IncreaseBuildingPadHeight
@@ -622,7 +622,7 @@ namespace Rainfall
 
         }
         private static int? _MaxBuildingPadHeight;
-        public const int _defaultMaxBuildingPadHeight = _maxPadIncrease;
+        public const int _defaultMaxBuildingPadHeight = 200;
 
         public static int MaxBuildingPadHeight
         {
@@ -636,7 +636,7 @@ namespace Rainfall
             }
             set
             {
-                if (value > 200f || value < 0f)
+                if (value > (float)_maxPadIncrease || value < 0f)
                     throw new ArgumentOutOfRangeException();
                 if (value == _MaxBuildingPadHeight)
                 {
@@ -707,7 +707,57 @@ namespace Rainfall
                 _pedestrianPathFloodedTolerance = value;
             }
         }
+        private static int? _TrainTrackFloodingTolerance;
+        public const int _defaultTrainTrackFloodingTolerance = 50;
 
+        public static int TrainTrackFloodingTolerance
+        {
+            get
+            {
+                if (!_TrainTrackFloodingTolerance.HasValue)
+                {
+                    _TrainTrackFloodingTolerance = PlayerPrefs.GetInt("RF_TrainTrackFloodingTolerance", (int)_defaultTrainTrackFloodingTolerance);
+                }
+                return _TrainTrackFloodingTolerance.Value;
+            }
+            set
+            {
+                if (value >= _TrainTrackFloodedTolerance || value < _minFloodTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _TrainTrackFloodingTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_TrainTrackFloodingTolerance", value);
+                _TrainTrackFloodingTolerance = value;
+            }
+        }
+
+        private static int? _TrainTrackFloodedTolerance;
+        public const int _defaultTrainTrackFloodedTolerance = 100;
+
+        public static int TrainTrackFloodedTolerance
+        {
+            get
+            {
+                if (!_TrainTrackFloodedTolerance.HasValue)
+                {
+                    _TrainTrackFloodedTolerance = PlayerPrefs.GetInt("RF_TrainTrackFloodedTolerance", (int)_defaultTrainTrackFloodedTolerance);
+                }
+                return _TrainTrackFloodedTolerance.Value;
+            }
+            set
+            {
+                if (value > _maxFloodTolerance || value <= _TrainTrackFloodingTolerance)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _TrainTrackFloodedTolerance)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_TrainTrackFloodedTolerance", value);
+                _TrainTrackFloodedTolerance = value;
+            }
+        }
         private static bool _freezeLandvalues;
         private static int? _freezeLandvaluesInt;
         public static bool FreezeLandvalues
@@ -970,6 +1020,43 @@ namespace Rainfall
 
             }
         }
+
+        private static bool _AdditionalToleranceOnSlopes;
+        private static int? _AdditionalToleranceOnSlopesInt;
+        public static bool AdditionalToleranceOnSlopes
+        {
+            get
+            {
+                if (_AdditionalToleranceOnSlopesInt == null)
+                {
+                    _AdditionalToleranceOnSlopesInt = PlayerPrefs.GetInt("RF_AdditionalToleranceOnSlopes", 1);
+                }
+                if (_AdditionalToleranceOnSlopesInt == 1)
+                {
+                    _AdditionalToleranceOnSlopes = true;
+                }
+                else
+                {
+                    _AdditionalToleranceOnSlopes = false;
+                }
+                return _AdditionalToleranceOnSlopes;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _AdditionalToleranceOnSlopesInt = 1;
+                }
+                else
+                {
+                    _AdditionalToleranceOnSlopesInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_AdditionalToleranceOnSlopes", (int)_AdditionalToleranceOnSlopesInt);
+
+
+            }
+        }
+
         public static void resetModSettings()
         {
             ModSettings.Difficulty = 100;
@@ -991,6 +1078,8 @@ namespace Rainfall
             ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
             ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
             ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
+            ModSettings.TrainTrackFloodedTolerance = _defaultTrainTrackFloodedTolerance;
+            ModSettings.TrainTrackFloodingTolerance = _defaultTrainTrackFloodingTolerance;
             ModSettings.IncreaseBuildingPadHeight = _defaultIncreaseBuildingPadHeight;
             ModSettings.IncreaseExistingVanillaPadsOnLoad = false;
             ModSettings.MaxBuildingPadHeight = _defaultMaxBuildingPadHeight;
@@ -1001,6 +1090,7 @@ namespace Rainfall
             ModSettings.PreventRainBeforeMilestone = true;
             ModSettings.GravityDrainageOption = _defaultGravityDrainageOption;
             ModSettings.StormDrainAssetControlOption = _defaultStormDrainAssetControlOption;
+            ModSettings.AdditionalToleranceOnSlopes = true;
             //ModSettings.ImprovedInletMechanics = true;
             foreach (KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
             {

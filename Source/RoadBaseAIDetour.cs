@@ -107,15 +107,26 @@ namespace Rainfall
             }
             Vector3 position = instance2.m_nodes.m_buffer[(int)data.m_startNode].m_position;
             Vector3 position2 = instance2.m_nodes.m_buffer[(int)data.m_endNode].m_position;
+            //edit
+            float length = Mathf.Sqrt((float)(Math.Pow((position.x - position2.x),2.0)+ Math.Pow((position.z - position2.z), 2.0)))/8f;
+            float slope = (position.y - position2.y) / length;
             Vector3 vector = (position + position2) * 0.5f;
+            float additionalToleranceForSlope = 0;
+            if (ModSettings.AdditionalToleranceOnSlopes == true)
+            {
+                
+                additionalToleranceForSlope += Mathf.Abs(slope);
+            }
+            //end edit
             bool flag = false;
             if ((this.m_info.m_setVehicleFlags & Vehicle.Flags.Underground) == (Vehicle.Flags)0)
             {
                 float num6 = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(vector));
                 // NON-STOCK CODE START
-                if (num6 > vector.y + (float)ModSettings.RoadwayFloodedTolerance / 100)
+                if (num6 > vector.y + (float)ModSettings.RoadwayFloodedTolerance / 100 + additionalToleranceForSlope*2)
                 {
                     flag = true;
+                    //Debug.Log("[RF]RoadBaseAIDetour segmentID " + segmentID.ToString() + " slope = " + slope.ToString() + " wse = " + num6.ToString() + " vector.y " + vector.y.ToString() + " tolerance " + ((float)ModSettings.RoadwayFloodedTolerance / 100 + additionalToleranceForSlope * 2).ToString());
                     data.m_flags |= NetSegment.Flags.Flooded;
                     //Debug.Log("[RF] Successfully detoured roadway flooded tolerance");
                     problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
@@ -132,7 +143,7 @@ namespace Rainfall
                     data.m_flags &= ~NetSegment.Flags.Flooded;
 
                     // Rainfall compatibility
-                    float add = (float)ModSettings.RoadwayFloodingTolerance / 100;
+                    float add = (float)ModSettings.RoadwayFloodingTolerance / 100 + additionalToleranceForSlope;
                     //Debug.Log("[RF] Successfully detoured roadway flooding tolerance");
                     if (num6 > vector.y + add)
                     {
@@ -311,7 +322,7 @@ namespace Rainfall
                 GuideController properties = Singleton<GuideManager>.instance.m_properties;
                 if (properties != null)
                 {
-                    Singleton<NetManager>.instance.m_shortRoadTraffic.Activate(properties.m_shortRoadTraffic, segmentID);
+                    Singleton<NetManager>.instance.m_shortRoadTraffic.Activate(properties.m_shortRoadTraffic, segmentID/*, false*/);
                 }
             }
             if ((data.m_flags & NetSegment.Flags.Collapsed) != NetSegment.Flags.None)
@@ -319,7 +330,7 @@ namespace Rainfall
                 GuideController properties2 = Singleton<GuideManager>.instance.m_properties;
                 if (properties2 != null)
                 {
-                    Singleton<NetManager>.instance.m_roadDestroyed.Activate(properties2.m_roadDestroyed, segmentID);
+                    Singleton<NetManager>.instance.m_roadDestroyed.Activate(properties2.m_roadDestroyed, segmentID/*, false*/);
                     Singleton<NetManager>.instance.m_roadDestroyed2.Activate(properties2.m_roadDestroyed2, this.m_info.m_class.m_service);
                 }
                 if ((ulong)(instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15)))

@@ -66,10 +66,13 @@ namespace Rainfall
                 if (this.m_naturalDrainageMultiplier != 0 && Singleton<WeatherManager>.instance.m_currentRain > 0)
                 {
                     return Color.cyan;
-                }
+                } 
                 if ((data.m_flags & Building.Flags.Active) == Building.Flags.None)
                 {
                     return Singleton<InfoManager>.instance.m_properties.m_modeProperties[(int)infoMode].m_inactiveColor;
+                } else if (this.m_naturalDrainageMultiplier != 0)
+                {
+                    return Color.gray;
                 }
             
                 return base.GetColor(buildingID, ref data, infoMode);

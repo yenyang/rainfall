@@ -50,6 +50,8 @@ namespace Rainfall
         public Queue  _unpairedUpstreamCulverts;
         public Queue  _unpairedDownstreamCulverts;
 
+        public HashSet<ushort> netsegments;
+
         //private int _lastUsedCulvert = 0;
         public Hydraulics()
         {
@@ -92,6 +94,7 @@ namespace Rainfall
             _SDoutlets = new HashSet<ushort>();
             _SDdetentionBasins = new HashSet<ushort>();
             _naturalDrainageAssets = new HashSet<ushort>();
+            netsegments = new HashSet<ushort>();
            
             _previousFacilityWaterSources = new HashSet<ushort>();
             _unpairedUpstreamCulverts = new Queue();

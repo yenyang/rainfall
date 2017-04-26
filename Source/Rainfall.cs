@@ -44,6 +44,8 @@ namespace Rainfall
         public UISlider RoadwayFloodedToleranceSlider;
         public UISlider PedestrianPathFloodingToleranceSlider;
         public UISlider PedestrianPathFloodedToleranceSlider;
+        public UISlider TrainTrackFloodingToleranceSlider;
+        public UISlider TrainTrackFloodedToleranceSlider;
         public UISlider IncreaseBuildingPadHeightSlider;
         public UISlider MaxBuildingPadHeightSlider;
         public UICheckBox AdditionalIncreaseForLowerPadsCheckBox;
@@ -58,6 +60,8 @@ namespace Rainfall
         public UIButton DeleteAssetsButton;
         public UIButton CleanUpCycleButton;
         public UIButton EndStormButton;
+       
+        public UICheckBox AdditionalToleranceOnSlopeCheckBox;
         public List<OptionsItemBase> PublicBuildingsRunoffCoefficientSliders;
         public List<OptionsItemBase> PrivateBuildingsRunoffCoefficientSliders;
         
@@ -111,6 +115,7 @@ namespace Rainfall
             RoadwayFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Roadway Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.RoadwayFloodedTolerance, OnRoadwayFloodedToleranceChanged) as UISlider;
             RoadwayFloodedToleranceSlider.tooltip = ((float)ModSettings.RoadwayFloodedTolerance / 100f).ToString() + " units";
             RoadwayFloodedToleranceSlider.width += 100;
+            AdditionalToleranceOnSlopeCheckBox = FloodingToleranceGroup.AddCheckbox("Additional Roadway Tolerance based on Slope", ModSettings.AdditionalToleranceOnSlopes, OnAdditionalToleranceCheckBoxChanged) as UICheckBox;
 
             PedestrianPathFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodingTolerance, OnPedestrianPathFloodingToleranceChanged) as UISlider;
             PedestrianPathFloodingToleranceSlider.tooltip = ((float)ModSettings.PedestrianPathFloodingTolerance / 100f).ToString() + " units";
@@ -118,7 +123,14 @@ namespace Rainfall
             PedestrianPathFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.PedestrianPathFloodedTolerance, OnPedestrianPathFloodedToleranceChanged) as UISlider;
             PedestrianPathFloodedToleranceSlider.tooltip = ((float)ModSettings.PedestrianPathFloodedTolerance / 100f).ToString() + " units";
             PedestrianPathFloodedToleranceSlider.width += 100;
-         
+
+            TrainTrackFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodingTolerance, OnTrainTrackFloodingToleranceChanged) as UISlider;
+            TrainTrackFloodingToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodingTolerance / 100f).ToString() + " units";
+            TrainTrackFloodingToleranceSlider.width += 100;
+            TrainTrackFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodedTolerance, OnTrainTrackFloodedToleranceChanged) as UISlider;
+            TrainTrackFloodedToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodedTolerance / 100f).ToString() + " units";
+            TrainTrackFloodedToleranceSlider.width += 100;
+
             UIHelperBase StormWaterSimulationGroup = helper.AddGroup("Stormwater Simulation Settings");
             AutomaticallyPickStormDistributionCheckBox = StormWaterSimulationGroup.AddCheckbox("Automatically Select Storm Distribution", ModSettings.AutomaticStormDistribution, OnAutomaticStormDistributionCheckBoxChanged) as UICheckBox;
             cityNames = getCityNamesDropDownOptions();
@@ -240,6 +252,33 @@ namespace Rainfall
             PedestrianPathFloodedToleranceSlider.tooltipBox.Show();
             PedestrianPathFloodedToleranceSlider.RefreshTooltip();
         }
+
+        private void OnTrainTrackFloodingToleranceChanged(float val)
+        {
+            if (val < ModSettings.TrainTrackFloodedTolerance)
+                ModSettings.TrainTrackFloodingTolerance = (int)val;
+            else
+            {
+                ModSettings.TrainTrackFloodingTolerance = ModSettings.TrainTrackFloodedTolerance - ModSettings._floodToleranceStep;
+                TrainTrackFloodingToleranceSlider.value = ModSettings.TrainTrackFloodingTolerance;
+            }
+            TrainTrackFloodingToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodingTolerance / 100f).ToString() + " units";
+            TrainTrackFloodingToleranceSlider.tooltipBox.Show();
+            TrainTrackFloodingToleranceSlider.RefreshTooltip();
+        }
+        private void OnTrainTrackFloodedToleranceChanged(float val)
+        {
+            if (val > ModSettings.TrainTrackFloodingTolerance)
+                ModSettings.TrainTrackFloodedTolerance = (int)val;
+            else
+            {
+                ModSettings.TrainTrackFloodedTolerance = ModSettings.TrainTrackFloodingTolerance + ModSettings._floodToleranceStep;
+                TrainTrackFloodedToleranceSlider.value = ModSettings.TrainTrackFloodedTolerance;
+            }
+            TrainTrackFloodedToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodedTolerance / 100f).ToString() + " units";
+            TrainTrackFloodedToleranceSlider.tooltipBox.Show();
+            TrainTrackFloodedToleranceSlider.RefreshTooltip();
+        }
         private void OnIncreaseBuildingPadHeightChanged(float val)
         {
             if (val < ModSettings.MaxBuildingPadHeight)
@@ -275,6 +314,10 @@ namespace Rainfall
         }
 
         private void OnChirpForecastCheckBoxChanged(bool val)
+        {
+            ModSettings.ChirpForecasts = (bool)val;
+        }
+        private void OnAdditionalToleranceCheckBoxChanged(bool val)
         {
             ModSettings.ChirpForecasts = (bool)val;
         }
@@ -516,6 +559,8 @@ namespace Rainfall
             RoadwayFloodingToleranceSlider.value = ModSettings._defaultRoadwayFloodingTolerance;
             PedestrianPathFloodedToleranceSlider.value = ModSettings._defaultRoadwayFloodedTolerance;
             PedestrianPathFloodingToleranceSlider.value = ModSettings._defaultRoadwayFloodingTolerance;
+            TrainTrackFloodedToleranceSlider.value = ModSettings._defaultRoadwayFloodedTolerance;
+            TrainTrackFloodingToleranceSlider.value = ModSettings._defaultRoadwayFloodingTolerance;
             FreezeLandvaluesCheckBox.isChecked = ModSettings.FreezeLandvalues;
             //ImprovedInletMechanicsCheckBox.isChecked = ModSettings.ImprovedInletMechanics;
             PreventRainBeforeMilestoneCheckBox.isChecked = ModSettings.PreventRainBeforeMilestone;
@@ -525,6 +570,7 @@ namespace Rainfall
             IncreaseBuildingPadHeightSlider.value = ModSettings.IncreaseBuildingPadHeight;
             MaxBuildingPadHeightSlider.value = ModSettings.MaxBuildingPadHeight;
             AdditionalIncreaseForLowerPadsCheckBox.isChecked = ModSettings.AdditionalIncreaseForLowerPads;
+            AdditionalToleranceOnSlopeCheckBox.isChecked = ModSettings.AdditionalToleranceOnSlopes;
             IncreaseExistingVanillaPadsOnLoadCheckbox.isChecked = ModSettings.IncreaseExistingVanillaPadsOnLoad;
             foreach (OptionsItemBase sliderOIB in PublicBuildingsRunoffCoefficientSliders)
             {
@@ -558,7 +604,7 @@ namespace Rainfall
 
             }
         }
-
+      
     }
     
 

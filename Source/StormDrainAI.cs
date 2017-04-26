@@ -214,6 +214,7 @@ namespace Rainfall
             if (this.m_stormWaterIntake > 0)
             {
                 Hydraulics.addInlet(buildingID);
+               
             } else if (this.m_stormWaterOutlet > 0)
             {
                 Hydraulics.addOutlet(buildingID);
@@ -277,7 +278,7 @@ namespace Rainfall
 
         public override ToolBase.ToolErrors CheckBuildPosition(ushort relocateID, ref Vector3 position, ref float angle, float waterHeight, float elevation, ref Segment3 connectionSegment, out int productionRate, out int constructionCost)
         {
-            BuildingDecoration.LoadProps(this.m_info, 0, ref Singleton<BuildingManager>.instance.m_buildings.m_buffer[relocateID]);
+            //BuildingDecoration.LoadProps(this.m_info, 0, ref Singleton<BuildingManager>.instance.m_buildings.m_buffer[relocateID]);
             if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
             {
                 if (this.m_info.m_placementMode != this.m_placementModeAlt)
@@ -292,7 +293,22 @@ namespace Rainfall
             } else if (this.m_info.m_placementMode != this.m_placementMode) {
                 this.m_info.m_placementMode = this.m_placementMode;
             }
-         
+            if (this.m_stormWaterIntake > 0)
+            {
+                Vector3 finalPosition;
+                Vector3 finalAngle;
+                if (this.SnapToRoad(position, out finalPosition, out finalAngle, 20f))
+                {
+                    //Debug.Log("[RF].StormDrainAI.CheckBuildPosition angle = " + angle.ToString());
+                    angle = Mathf.Atan2(finalAngle.x, -finalAngle.z);
+                    //Debug.Log("[RF].StormDrainAI.CheckBuildPosition new angle = " + angle.ToString());
+                    //Debug.Log("[RF].StormDrainAI.CheckBuildPosition position x,z = " + position.x.ToString() + "," + position.z.ToString());
+                    position.x = finalPosition.x;
+                    position.z = finalPosition.z;
+                    //Debug.Log("[RF].StormDrainAI.CheckBuildPosition new position x,z = " + position.x.ToString() + "," + position.z.ToString());
+                }
+
+            }
 
             if (this.m_stormWaterDetention != 0 || this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0 || this.m_stormWaterOutlet > 0 || this.m_culvert == true)
             {
@@ -306,7 +322,8 @@ namespace Rainfall
             Vector3 vector = Building.CalculatePosition(position, angle, this.m_waterLocationOffset);
             Vector3 a;
             Vector3 a2;
-            if (BuildingTool.SnapToCanal(position, out a, out a2, 40f, true))
+            //bool flag1;
+            if (BuildingTool.SnapToCanal(position, out a, out a2/*, out flag1*/, 40f, true) && this.m_stormWaterIntake <= 0)
             {
                 angle = Mathf.Atan2(a2.x, -a2.z);
                 a -= a2 * this.m_waterLocationOffset.z;
@@ -320,10 +337,152 @@ namespace Rainfall
             {
                 productionRate = 0;
             }
-            
             return toolErrors;
         }
+        /*
+        private bool getStormDrainLateral(Vector3 inletPos, out Vector3 lateralPos, out Vector3 lateralAngle, float maxDistance)
+        {
+            NetManager _netManager = Singleton<NetManager>.instance;
+            bool result = false;
+            lateralPos = inletPos;
+            lateralAngle = Vector3.forward;
+            float minX = inletPos.x - maxDistance - 100f;
+            float minZ = inletPos.z - maxDistance - 100f;
+            float maxX = inletPos.x + maxDistance + 100f;
+            float maxZ = inletPos.z + maxDistance + 100f;
+            int minXint = Mathf.Max((int)(minX / 64f + 135f), 0);
+            int minZint = Mathf.Max((int)(minZ / 64f + 135f), 0);
+            int maxXint = Mathf.Max((int)(maxX / 64f + 135f), 269);
+            int maxZint = Mathf.Max((int)(maxZ / 64f + 135f), 269);
+
+            Array16<NetSegment> segments = Singleton<NetManager>.instance.m_segments;
+            ushort[] segmentGrid = Singleton<NetManager>.instance.m_segmentGrid;
+            for (int i = minZint; i <= maxZint; i++)
+            {
+                for (int j = minXint; j <= maxXint; j++)
+                {
+                    ushort segmentGridZX = segmentGrid[i * 270 + j];
+                    int iterator = 0;
+                    while (segmentGridZX != 0)
+                    {
+                        NetSegment.Flags flags = segments.m_buffer[(int)segmentGridZX].m_flags;
+                        if ((flags & (NetSegment.Flags.Created | NetSegment.Flags.Deleted)) == NetSegment.Flags.Created)
+                        {
+                            NetInfo info = segments.m_buffer[(int)segmentGridZX].Info;
+                            if (info.m_class.m_service == ItemClass.Service.Water)
+                            {
+                                Vector3 min = segments.m_buffer[(int)segmentGridZX].m_bounds.min;
+                                Vector3 max = segments.m_buffer[(int)segmentGridZX].m_bounds.max;
+                                if (min.x < maxX && min.z < maxZ && max.x > minX && max.z > minZ)
+                                {
+                                    Vector3 centerPos;
+                                    Vector3 centerDirection;
+                                    segments.m_buffer[(int)segmentGridZX].GetClosestPositionAndDirection(inletPos, out centerPos, out centerDirection);
+                                  
+                                    float distanceToPipe = Vector3.Distance(centerPos, inletPos);
+
+                                    if (distanceToPipe < maxDistance)
+                                    {
+                                        Vector3 vector2 = new Vector3(centerDirection.z, 0f, -centerDirection.x);
+                                        lateralAngle = vector2.normalized;
+                                        if (Vector3.Dot(centerPos - inletPos, lateralAngle) < 0f)
+                                        {
+                                            lateralAngle = -lateralAngle;
+                                        }
+                                        lateralPos = centerPos;
+                                        maxDistance = distanceToPipe;
+                                        result = true;
+                                    }
+
+
+                                }
+                            }
+                        }
+                        segmentGridZX = segments.m_buffer[(int)segmentGridZX].m_nextGridSegment;
+                        if (++iterator >= 32768)
+                        {
+                            Debug.Log("[RF].StormDrainAI.SnapToRoad Invalid List Detected!!!");
+                            break;
+                        }
+                    }
+                }
+            }
+          
+            return result;
+        }  */
         
+        private bool SnapToRoad(Vector3 refPos, out Vector3 pos, out Vector3 dir, float maxDistance)
+        {
+            bool result = false;
+            pos = refPos;
+            dir = Vector3.forward;
+            float minX = refPos.x - maxDistance - 100f;
+            float minZ = refPos.z - maxDistance - 100f;
+            float maxX = refPos.x + maxDistance + 100f;
+            float maxZ = refPos.z + maxDistance + 100f;
+            int minXint = Mathf.Max((int)(minX/64f +135f), 0);
+            int minZint = Mathf.Max((int)(minZ / 64f + 135f), 0);
+            int maxXint = Mathf.Max((int)(maxX / 64f + 135f), 269);
+            int maxZint = Mathf.Max((int)(maxZ / 64f + 135f), 269);
+
+            Array16<NetSegment> segments = Singleton<NetManager>.instance.m_segments;
+            ushort[] segmentGrid = Singleton<NetManager>.instance.m_segmentGrid;
+            for (int i=minZint; i <= maxZint; i++)
+            {
+                for (int j=minXint; j<=maxXint; j++)
+                {
+                    ushort segmentGridZX = segmentGrid[i * 270 + j];
+                    int iterator = 0;
+                    while (segmentGridZX != 0)
+                    {
+                        NetSegment.Flags flags = segments.m_buffer[(int)segmentGridZX].m_flags;
+                        if ((flags & (NetSegment.Flags.Created | NetSegment.Flags.Deleted)) == NetSegment.Flags.Created)
+                        {
+                            NetInfo info = segments.m_buffer[(int)segmentGridZX].Info;
+                            if (info.m_class.m_service == ItemClass.Service.Road)
+                            {
+                                Vector3 min = segments.m_buffer[(int)segmentGridZX].m_bounds.min;
+                                Vector3 max = segments.m_buffer[(int)segmentGridZX].m_bounds.max;
+                                if (min.x < maxX && min.z < maxZ && max.x > minX && max.z > minZ)
+                                {
+                                    Vector3 centerPos;
+                                    Vector3 centerDirection;
+                                    segments.m_buffer[(int)segmentGridZX].GetClosestPositionAndDirection(refPos, out centerPos, out centerDirection);
+                                    //Debug.Log("[RF]StormDrainAI.SnapToRoad refPos = " + refPos.ToString());
+                                    //Debug.Log("[RF]StormDrainAI.SnapToRoad CenterPos = " + centerPos.ToString());
+                                    float distanceToRoad = Vector3.Distance(centerPos, refPos) - info.m_halfWidth;
+                                    if (distanceToRoad < maxDistance)
+                                    {
+                                        //Debug.Log("[RF]StormDrainAI.SnapToRoad distance to road = " + distanceToRoad);
+                                        Vector3 vector2 = new Vector3(centerDirection.z, 0f, -centerDirection.x);
+                                        dir = vector2.normalized;
+                                        if (Vector3.Dot(centerPos-refPos,dir) < 0f)
+                                        {
+                                            dir = -dir;
+                                        }
+                                        pos = centerPos;
+                                        maxDistance = distanceToRoad;
+                                        result = true;
+                                        //Debug.Log("[RF].StormDrainAI.SnapToRoad = true");
+                                    }
+                                   
+                                   
+                                }
+                            }
+                        }
+                        segmentGridZX = segments.m_buffer[(int)segmentGridZX].m_nextGridSegment;
+                        if (++iterator >= 32768)
+                        {
+                            Debug.Log("[RF].StormDrainAI.SnapToRoad Invalid List Detected!!!");
+                            break;
+                        }
+                    }
+                }
+            }
+            //if (result == false)
+                //Debug.Log("[RF].StormDrainAI.SnapToRoad = false");
+            return result;
+        }
         protected override void HandleWorkAndVisitPlaces(ushort buildingID, ref Building buildingData, ref Citizen.BehaviourData behaviour, ref int aliveWorkerCount, ref int totalWorkerCount, ref int workPlaceCount, ref int aliveVisitorCount, ref int totalVisitorCount, ref int visitPlaceCount)
         {
             workPlaceCount += this.m_workPlaceCount0 + this.m_workPlaceCount1 + this.m_workPlaceCount2 + this.m_workPlaceCount3;
@@ -924,7 +1083,8 @@ namespace Rainfall
                 Vector3 vector3;
                 Vector3 vector4;
                 //Debug.Log("[RF].StormDrainAI  !watersource");
-                if (BuildingTool.SnapToCanal(vector2, out vector3, out vector4, , 0f, true))
+                //bool flag3;
+                if (BuildingTool.SnapToCanal(vector2, out vector3, out vector4, /*out flag3,*/ 0f, true))
                 {
                     vector2 = vector3;
                     flag2 = true;

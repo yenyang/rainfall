@@ -219,6 +219,7 @@ namespace Rainfall
             int maxy;
             this.CalculateAreaHeight(position.x, position.y, position.x, position.y, out miny, out avgy, out maxy);
             num25 = miny;
+           // num25 = (int)(this.SampleFinalHeight(position.x, position.y)*8);
             
             return num18 - num25 >= -16;
             //End Nonstock Code
