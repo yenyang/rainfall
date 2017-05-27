@@ -993,7 +993,7 @@ namespace Rainfall
             {
                 if (_AdditionalIncreaseForLowerPadsInt == null)
                 {
-                    _AdditionalIncreaseForLowerPadsInt = PlayerPrefs.GetInt("RF_AdditionalIncreaseForLowerPads", 1);
+                    _AdditionalIncreaseForLowerPadsInt = PlayerPrefs.GetInt("RF_AdditionalIncreaseForLowerPads", 0);
                 }
                 if (_AdditionalIncreaseForLowerPadsInt == 1)
                 {
@@ -1083,7 +1083,7 @@ namespace Rainfall
             ModSettings.IncreaseBuildingPadHeight = _defaultIncreaseBuildingPadHeight;
             ModSettings.IncreaseExistingVanillaPadsOnLoad = false;
             ModSettings.MaxBuildingPadHeight = _defaultMaxBuildingPadHeight;
-            ModSettings.AdditionalIncreaseForLowerPads = true;
+            ModSettings.AdditionalIncreaseForLowerPads = false;
             ModSettings.FreezeLandvalues = true;
             //ModSettings.EasyMode = false;
             ModSettings.SimulatePollution = true;

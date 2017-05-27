@@ -322,7 +322,7 @@ namespace Rainfall
                 GuideController properties = Singleton<GuideManager>.instance.m_properties;
                 if (properties != null)
                 {
-                    Singleton<NetManager>.instance.m_shortRoadTraffic.Activate(properties.m_shortRoadTraffic, segmentID/*, false*/);
+                    Singleton<NetManager>.instance.m_shortRoadTraffic.Activate(properties.m_shortRoadTraffic, segmentID, false);
                 }
             }
             if ((data.m_flags & NetSegment.Flags.Collapsed) != NetSegment.Flags.None)
@@ -330,7 +330,7 @@ namespace Rainfall
                 GuideController properties2 = Singleton<GuideManager>.instance.m_properties;
                 if (properties2 != null)
                 {
-                    Singleton<NetManager>.instance.m_roadDestroyed.Activate(properties2.m_roadDestroyed, segmentID/*, false*/);
+                    Singleton<NetManager>.instance.m_roadDestroyed.Activate(properties2.m_roadDestroyed, segmentID, false);
                     Singleton<NetManager>.instance.m_roadDestroyed2.Activate(properties2.m_roadDestroyed2, this.m_info.m_class.m_service);
                 }
                 if ((ulong)(instance.m_currentFrameIndex >> 8 & 15u) == (ulong)((long)(segmentID & 15)))

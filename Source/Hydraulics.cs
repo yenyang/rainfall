@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
 using System.Reflection;
+using System.Linq;
 
 namespace Rainfall
 {
@@ -69,6 +70,7 @@ namespace Rainfall
             _districtManager = Singleton<DistrictManager>.instance;
             _terrainManager = Singleton<TerrainManager>.instance;
             _waterSimulation = _terrainManager.WaterSimulation;
+            //Debug.Log("Initializing Managers()");
             /*Debug.Log("milestone names are:");
             foreach (KeyValuePair<string, MilestoneInfo> pair in Singleton<UnlockManager>.instance.m_allMilestones)
             {
@@ -105,6 +107,7 @@ namespace Rainfall
             _drainageGroups = new string[_capacity];
             _drainageGroupsNames = new HashSet<string>();
             created = true;
+            //Debug.Log("[RF].Hydraulics Created!");
             base.OnCreated(threading);
         }
 
@@ -114,8 +117,15 @@ namespace Rainfall
             
             base.OnBeforeSimulationTick();
         }
-        
-        public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
+
+        private static IEnumerable<UIPanel> GetUIPanelInstances() => UIView.library.m_DynamicPanels.Select(p => p.instance).OfType<UIPanel>();
+        private static string[] GetUIPanelNames() => GetUIPanelInstances().Select(p => p.name).ToArray();
+        private UIPanel GetPanel(string name)
+        {
+            return GetUIPanelInstances().FirstOrDefault(p => p.name == name);
+        }
+
+    public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
           
             if (terminated)
@@ -129,17 +139,19 @@ namespace Rainfall
 
             if (!initialized)
             {
-                //Debug.Log("Initializing!");
+                //Debug.Log("[RF].Hydraulics.initializing Initializing!");
                 InitializeManagers();
-                //Debug.Log("Initialized managers");
+                //Debug.Log("[RF].Hydraulics.initializing Initialized managers");
                 _SDinlets.Clear();
                 _SDoutlets.Clear();
                 _SDdetentionBasins.Clear();
-              
+                //Debug.Log("[RF].Hydraulics.initializing Cleared hashsets");
+
                 buildingWindowGameObject = new GameObject("buildingWindowObject");
-                serviceBuildingInfo = UIView.Find<UIPanel>("(Library) CityServiceWorldInfoPanel");
+                //serviceBuildingInfo = UIView.Find<UIPanel>("(Library) CityServiceWorldInfoPanel");
+                serviceBuildingInfo = GetPanel("(Library) CityServiceWorldInfoPanel");
                 _cityServiceWorldInfoPanel = serviceBuildingInfo.gameObject.transform.GetComponentInChildren<CityServiceWorldInfoPanel>();
-                //Debug.Log("Cleared hashsets");
+                //Debug.Log("[RF].Hydraulics.initializing WorldServiceInfoPanelStuff");
                 _capacity = _buildingManager.m_buildings.m_buffer.Length;
                 _stormwaterAccumulation = new int[_capacity];
                 _districts = new byte[_capacity];

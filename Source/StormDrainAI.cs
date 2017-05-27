@@ -322,8 +322,8 @@ namespace Rainfall
             Vector3 vector = Building.CalculatePosition(position, angle, this.m_waterLocationOffset);
             Vector3 a;
             Vector3 a2;
-            //bool flag1;
-            if (BuildingTool.SnapToCanal(position, out a, out a2/*, out flag1*/, 40f, true) && this.m_stormWaterIntake <= 0)
+            bool flag1;
+            if (BuildingTool.SnapToCanal(position, out a, out a2, out flag1, 40f, true) && this.m_stormWaterIntake <= 0)
             {
                 angle = Mathf.Atan2(a2.x, -a2.z);
                 a -= a2 * this.m_waterLocationOffset.z;
@@ -1083,8 +1083,8 @@ namespace Rainfall
                 Vector3 vector3;
                 Vector3 vector4;
                 //Debug.Log("[RF].StormDrainAI  !watersource");
-                //bool flag3;
-                if (BuildingTool.SnapToCanal(vector2, out vector3, out vector4, /*out flag3,*/ 0f, true))
+                bool flag3;
+                if (BuildingTool.SnapToCanal(vector2, out vector3, out vector4, out flag3, 0f, true))
                 {
                     vector2 = vector3;
                     flag2 = true;

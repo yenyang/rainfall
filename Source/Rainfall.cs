@@ -124,10 +124,10 @@ namespace Rainfall
             PedestrianPathFloodedToleranceSlider.tooltip = ((float)ModSettings.PedestrianPathFloodedTolerance / 100f).ToString() + " units";
             PedestrianPathFloodedToleranceSlider.width += 100;
 
-            TrainTrackFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodingTolerance, OnTrainTrackFloodingToleranceChanged) as UISlider;
+            TrainTrackFloodingToleranceSlider = FloodingToleranceGroup.AddSlider("Train Track Flooding Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodingTolerance, OnTrainTrackFloodingToleranceChanged) as UISlider;
             TrainTrackFloodingToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodingTolerance / 100f).ToString() + " units";
             TrainTrackFloodingToleranceSlider.width += 100;
-            TrainTrackFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Ped. Path Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodedTolerance, OnTrainTrackFloodedToleranceChanged) as UISlider;
+            TrainTrackFloodedToleranceSlider = FloodingToleranceGroup.AddSlider("Train Track Flooded Tol.", (float)ModSettings._minFloodTolerance, (float)ModSettings._maxFloodTolerance, (float)ModSettings._floodToleranceStep, (float)ModSettings.TrainTrackFloodedTolerance, OnTrainTrackFloodedToleranceChanged) as UISlider;
             TrainTrackFloodedToleranceSlider.tooltip = ((float)ModSettings.TrainTrackFloodedTolerance / 100f).ToString() + " units";
             TrainTrackFloodedToleranceSlider.width += 100;
 
