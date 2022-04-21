@@ -1,22 +1,29 @@
-﻿using ICities;
+﻿using HarmonyLib;
+using ICities;
 using UnityEngine;
+using System;
+using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
-using Rainfall.Redirection;
 using ColossalFramework;
-using System;
+
+
+
+
 
 namespace Rainfall
 {
+
     public class LoadingFunctions : LoadingExtensionBase
     {
         private LoadMode _mode;
         public static bool fineRoadAnarchyLoaded = false;
-
+        public static bool loaded = false;
         public override void OnCreated(ILoading loading)
         {
             base.OnCreated(loading);
-            AssemblyRedirector.Deploy();
+            if (CitiesHarmony.API.HarmonyHelper.IsHarmonyInstalled) Patcher.PatchAll();
+
         }
 
         public override void OnLevelLoaded(LoadMode mode)
@@ -27,11 +34,12 @@ namespace Rainfall
                 return;
             Hydrology.instance.loaded = true;
             Hydraulics.instance.loaded = true;
+            loaded = true;
             Debug.Log("[RF] Level Loaded!");
             base.OnLevelLoaded(mode);
         }
 
-      
+
 
         public override void OnLevelUnloading()
         {
@@ -44,13 +52,20 @@ namespace Rainfall
         }
 
 
-       public override void OnReleased()
+        public override void OnReleased()
         {
+            if (CitiesHarmony.API.HarmonyHelper.IsHarmonyInstalled) Patcher.UnpatchAll();
+          
             base.OnReleased();
-            AssemblyRedirector.Revert();
+            
         }
-      
-        
+        public void OnEnabled()
+        {
+            CitiesHarmony.API.HarmonyHelper.EnsureHarmonyInstalled();
+        }
+
+
     }
+   
 }
 

@@ -29,24 +29,32 @@ namespace Rainfall
 
         public void OnBuildingCreated(ushort id)
         {
-            //Debug.Log("[RF]RFBuildingExtension reviewBuilding id" + id.ToString() + " is " + Hydrology.instance.reviewBuilding(id).ToString());
-            if (Hydrology.instance.reviewBuilding(id))
-            {
-                Hydrology.instance._newBuildingIDs.Add(id);
-                //Debug.Log("[RF]RFbuildingExtension Successfully added building " + id.ToString());
-            }
+            //recalculate drainage coefficient for drainage basin
         }
 
         public void OnBuildingRelocated(ushort id)
         {
-
+            //recalculate drainage coefficient for drainage basins
+            // how do i know where it came from?
         }
 
         public void OnBuildingReleased(ushort id)
         {
-            //Debug.Log("[RF]RFBuildingExtension release id" + id.ToString());
-            if (Hydrology.instance._buildingIDs.Contains(id))
-                Hydrology.instance._removeBuildingIDs.Add(id);
+            if (!DrainageBasin.reviewBuilding(id))
+            {
+                return;
+            }
+            Building data = Singleton<BuildingManager>.instance.m_buildings.m_buffer[id];
+            int gridX = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
+            int gridZ = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
+            int gridLocation = gridZ * 270 + gridX;
+
+            DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            bool logging = false;
+            if (logging)
+            {
+                Debug.Log("[RF]RFBuildingExtension.OnBuildingReleased recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
+            }
         }
 
     }

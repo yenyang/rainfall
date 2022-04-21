@@ -47,6 +47,7 @@ namespace Rainfall
             radius1 = this.m_maxWaterDistance;
             resource2 = NaturalResourceManager.Resource.None;
             position2 = data.m_position;
+            
             radius2 = 0f;
         }
 
@@ -212,10 +213,10 @@ namespace Rainfall
                 sourceData2.m_outputRate = 50u;
                 sourceData2.m_inputRate = 1u;
                 sourceData2.m_water = 1000u;
-                Debug.Log("[RF]NDai.HWS vector2 = " + vector2.ToString());
+                //Debug.Log("[RF]NDai.HWS vector2 = " + vector2.ToString());
 
                 sourceData2.m_target = (ushort)(vector2.y+this.m_standingWaterDepth);
-                Debug.Log("[RF]NDai.HWS target = " + sourceData2.m_target.ToString());
+                //Debug.Log("[RF]NDai.HWS target = " + sourceData2.m_target.ToString());
                 if (!waterSimulation.CreateWaterSource(out data.m_waterSource, sourceData2))
                 {
                     return false;
@@ -231,6 +232,7 @@ namespace Rainfall
             onlyCollapse = false;
             return false;
         }
+        
         public override float ElectricityGridRadius()
         {
             

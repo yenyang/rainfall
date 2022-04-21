@@ -6,6 +6,7 @@ namespace Rainfall
 {
     internal static class ModSettings
     {
+        public const string PlayerPrefPrefix = "RF2_";
         private static int? _difficulty;
         public const int _maxDifficulty = 200;
         public const int _difficultyStep = 10;
@@ -23,7 +24,7 @@ namespace Rainfall
             }
             set
             {
-                if (value > 200)
+                if (value > _maxDifficulty)
                     throw new ArgumentOutOfRangeException();
                 if (value == _difficulty)
                 {
@@ -33,6 +34,35 @@ namespace Rainfall
                 _difficulty = value;
             }
         }
+
+        private static int? _snowmeltFactor;
+        public const int _maxSnowmeltFactor = 200;
+        public const int _SnowmeltFactorStep = 10;
+        public const int _defaultSnowMeltFactor = 100;
+        public const float _SnowmeltFactorExaggeration = .01f;
+        public static int SnowmeltFactor
+        {
+            get
+            {
+                if (!_snowmeltFactor.HasValue)
+                {
+                    _snowmeltFactor = PlayerPrefs.GetInt("RF_SnowmeltFactor", _defaultSnowMeltFactor);
+                }
+                return _snowmeltFactor.Value;
+            }
+            set
+            {
+                if (value > _maxSnowmeltFactor)
+                    throw new ArgumentOutOfRangeException();
+                if (value == _snowmeltFactor)
+                {
+                    return;
+                }
+                PlayerPrefs.SetInt("RF_SnowmeltFactor", value);
+                _snowmeltFactor = value;
+            }
+        }
+
         private static int? _refreshRate;
         public const int _maxRefreshRate = 60;
      
@@ -152,114 +182,13 @@ namespace Rainfall
             }
         }
 
-        private static bool _automaticStormDistribution;
-        private static int? _automaticStormDistributionInt;
-        public static bool AutomaticStormDistribution
-        {
-            get
-            {
-                if (_automaticStormDistributionInt == null)
-                {
-                    _automaticStormDistributionInt = PlayerPrefs.GetInt("RF_AutomaticStormDistribution", 1);
-                }
-                if (_automaticStormDistributionInt == 1)
-                {
-                    _automaticStormDistribution = true;
-                }
-                else
-                {
-                    _automaticStormDistribution = false;
-                }
-                return _automaticStormDistribution;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _automaticStormDistributionInt = 1;
-                }
-                else
-                {
-                    _automaticStormDistributionInt = 0;
-                }
-                PlayerPrefs.SetInt("RF_AutomaticStormDistribution", (int)_automaticStormDistributionInt);
-
-
-            }
-        }
-        public const string UnmoddedStormDistributionName = "Unmodded Simulation (Not Recommended)";
-        public const string DefaultStormDistributionName = "Type II - Noncoastal US";
-        private static string _stormDistributionName;
-        public static string StormDistributionName
-        {
-            get
-            {
-                if (_stormDistributionName == null)
-                {
-                    _stormDistributionName = PlayerPrefs.GetString("RF_StormDistributionName", DefaultStormDistributionName);
-                }
-                return _stormDistributionName;
-            }
-            set
-            {
-                if (value != "")
-                {
-                    PlayerPrefs.SetString("RF_StormDistributionName", value);
-                    _stormDistributionName = value;
-                    Debug.Log("[RF]ModSettings RF_StormDistributionName = " + _stormDistributionName);
-                }
-            }
-        }
-        public const string UnmoddedCityName = "Unmodded Simulation (Not Recommended)";
-        public const string DefaultCityName = "Boise. Idaho. USA";
-        private static string _cityName;
-        public static string CityName
-        {
-            get
-            {
-                if (_cityName == null)
-                {
-                    _cityName = PlayerPrefs.GetString("RF_CityName", DefaultCityName);
-                }
-                if (!DepthDurationFrequencyIO.HasCity(_cityName))
-                    _cityName = DefaultCityName;
-                return _cityName;
-            }
-            set
-            {
-                if (value != "")
-                {
-                    PlayerPrefs.SetString("RF_CityName", value);
-                    _cityName = value;
-                    Debug.Log("[RF]ModSettings RF_CityName = " + _cityName);
-                  
-                }
-            }
-        }
-
-        public const float DefaultTimeScale = 1f;
-        private static float _timeScale;
-        public static float TimeScale
-        {
-            get
-            {
-                if (_timeScale == 0f)
-                {
-                    _timeScale = PlayerPrefs.GetFloat("RF_TimeScale", DefaultTimeScale);
-
-                }
-                return _timeScale;
-            }
-            set
-            {
-                PlayerPrefs.SetFloat("RF_TimeScale", value);
-                _timeScale = value;
-            }
-        }
-
+        
+       
         private static int? _userMinimumStormDuration;
         public const float _maxStormDuration = 1440f;
         public const float _minStormDuration = 30f;
+        public const float _defaultMinStormDuration = 360f;
+        public const float _defaultMaxStormDuration = 720f;
         public const float _stormTimeStep = 3f;
         public const float _stormDurationStep = 15f;
 
@@ -295,7 +224,7 @@ namespace Rainfall
             {
                 if (!_userMaximumStormDuration.HasValue)
                 {
-                    _userMaximumStormDuration = PlayerPrefs.GetInt("RF_MaximumStormDuration", (int)_maxStormDuration);
+                    _userMaximumStormDuration = PlayerPrefs.GetInt("RF_MaximumStormDuration", (int)_defaultStormIntensity);
                 }
                 return _userMaximumStormDuration.Value;
             }
@@ -315,6 +244,7 @@ namespace Rainfall
         private static int? _userMaximumStormIntensitySlider;
         public const float _maxStormIntensity = 25f;
         public const float _minStormIntensity = 1f;
+        public const float _defaultStormIntensity = 2f;
         public const float _stormIntenistyStep = 1f;
 
 
@@ -324,7 +254,7 @@ namespace Rainfall
             {
                 if (!_userMaximumStormIntensitySlider.HasValue)
                 {
-                    _userMaximumStormIntensitySlider = PlayerPrefs.GetInt("RF_MaximumStormIntensity", (int)_maxStormIntensity);
+                    _userMaximumStormIntensitySlider = PlayerPrefs.GetInt("RF_MaximumStormIntensity", (int)_defaultStormIntensity);
                 }
                 return _userMaximumStormIntensitySlider.Value;
             }
@@ -365,44 +295,118 @@ namespace Rainfall
 
         public static Dictionary<string, float> DefaultRunoffCoefficients = new Dictionary<string, float>()
         {
-            {"CemetaryAI", 0.2f }, {"ParkAI", 0.2f }, {"LandfillSiteAI", 0.1f }, {"FirestationAI" , 0.4f }, {"PoliceStationAI", 0.4f },
+            {"CemetaryAI", 0.2f }, {"ParkAI", 0.2f }, {"LandfillSiteAI", 0.4f }, {"FirestationAI" , 0.4f }, {"PoliceStationAI", 0.4f },
             {"HospitalAI", 0.6f }, {"PowerPlantAI", 0.8f }, {"DepotAI", 0.4f }, {"CargoStationAI", 0.5f }, {"SaunaAI", 0.3f }, {"SchoolAI", 0.4f },
             {"OtherPlayerBuildingAI", 0.5f }, {"LowDensityResidentialBuildingAI", 0.35f }, {"LowDensityCommercialBuildingAI", 0.5f },
             {"HighDensityResidentialBuildingAI", 0.6f }, {"HighDensityCommercialBuildingAI", 0.7f }, {"FarmingIndustrialBuildingAI", 0.2f },
             {"ForestryIndustrialBuildingAI", 0.2f }, {"OreIndustrialBuildingAI", 0.85f }, {"OilIndustryBuildingAI", 0.9f }, {"GenericIndustryBuildingAI", 0.8f },
-            {"NaturalDrainageAI", 0.2f }, {"OtherPrivateBuildingAI", 0.5f }
+            {"NaturalDrainageAI", 0.2f }, {"OtherPrivateBuildingAI", 0.5f }, {"NatureReserveParkBuilding",0.3f }, {"ZooParkBuilding", 0.4f }, {"AmusementParkBuilding", 0.6f},
+            {"TourBuildingAI",0.6f}, {"DisasterResponseBuildingAI",0.7f }, {"MonumentAI", 0.7f }, {"OfficeBuildingAI", 0.5f }, {"SelfSufficientModifier",-0.1f }, {"TourismModifier", 0.05f },
+            {"LeisureModifier", 0f }, {"OrganicModifier", -0.05f }, {"HighTechModifier",-0.05f }, {"RoadAI", 0.8f}, {"PedestrianPathAI", 0.7f }, {"PedestrianWayAI", 0.7f },
+            {"RunwayAI", 0.9f },  {"TaxiwayAI", 0.9f },  {"TrainTrackBaseAI", 0.5f },  {"MetroTrackBaseAI", 0.5f },  {"MonorailTrackAI", 0.3f }
         };
-
+        /*
+        public static Dictionary<string, float> DefaultRunoffModifiers = new Dictionary<string, float>()
+        {
+            {"LowDensityModifier", -0.1f }, {"HighDensityModfier", 0.1f},
+            { "SelfSufficientModifier",-0.1f }, {"TourismModifier", 0.05f },
+            {"LeisureModifier", 0f }, {"OrganicModifier", -0.05f }, {"HighTechModifier",-0.05f }
+        };*/
         public static Dictionary<string, runoffStruct> PublicBuildingsRunoffCoefficients = new Dictionary<string, runoffStruct>() {
             { "CemetaryAI", new runoffStruct( "Cemetaries" , PlayerPrefs.GetFloat("RF_CemetaryAI", DefaultRunoffCoefficients["CemetaryAI"])) },
-            { "ParkAI", new runoffStruct( "Parks" , PlayerPrefs.GetFloat("RF_ParkAI", DefaultRunoffCoefficients["ParkAI"])) },
+            { "ParkAI", new runoffStruct( "Parks and City Parks" , PlayerPrefs.GetFloat("RF_ParkAI", DefaultRunoffCoefficients["ParkAI"])) },
+            { "NatureReserveParkBuilding", new runoffStruct( "Nature Reserve Bldg" , PlayerPrefs.GetFloat("RF_NatureReserveParkBuilding", DefaultRunoffCoefficients["NatureReserveParkBuilding"])) },
+            { "ZooParkBuilding", new runoffStruct( "Zoo Bldg" , PlayerPrefs.GetFloat("RF_ZooParkBuilding", DefaultRunoffCoefficients["ZooParkBuilding"])) },
+            { "AmusementParkBuilding", new runoffStruct( "Amusement Park Bldg" , PlayerPrefs.GetFloat("RF_AmusementParkBuilding", DefaultRunoffCoefficients["AmusementParkBuilding"])) },
             { "NaturalDrainageAI", new runoffStruct("Natural Drainage Assets", PlayerPrefs.GetFloat("RF_NaturalDrainageAI", DefaultRunoffCoefficients["NaturalDrainageAI"])) },
             { "LandfillSiteAI", new runoffStruct("Landfills", PlayerPrefs.GetFloat("RF_LandfillSiteAI", DefaultRunoffCoefficients["LandfillSiteAI"])) },
             {  "FirestationAI", new runoffStruct( "Fire Stations",  PlayerPrefs.GetFloat("RF_FirestationAI", DefaultRunoffCoefficients["FirestationAI"])) },
             {  "PoliceStationAI", new runoffStruct( "Police Stations",  PlayerPrefs.GetFloat("RF_PoliceStationAI", DefaultRunoffCoefficients["PoliceStationAI"])) },
             {  "HospitalAI", new runoffStruct( "Hospitals" , PlayerPrefs.GetFloat("RF_HospitalAI", DefaultRunoffCoefficients["HospitalAI"])) },
-            {  "PowerPlantAI", new runoffStruct( "Power Plants",  PlayerPrefs.GetFloat("RF_PowerPlanAI", DefaultRunoffCoefficients["PowerPlantAI"])) },
-            {  "DepotAI", new runoffStruct( "Depots",  PlayerPrefs.GetFloat("RF_DepotAI", DefaultRunoffCoefficients["DepotAI"])) },
+            {  "PowerPlantAI", new runoffStruct( "Power and Heating Plants",  PlayerPrefs.GetFloat("RF_PowerPlanAI", DefaultRunoffCoefficients["PowerPlantAI"])) },
+            {  "DepotAI", new runoffStruct( "Depots & Post Office",  PlayerPrefs.GetFloat("RF_DepotAI", DefaultRunoffCoefficients["DepotAI"])) },
             {  "CargoStationAI", new runoffStruct( "Cargo Stations",  PlayerPrefs.GetFloat("RF_CargoStationAI", DefaultRunoffCoefficients["CargoStationAI"]))},
             {  "SaunaAI", new runoffStruct( "Saunas",  PlayerPrefs.GetFloat("RF_SaunaAI", DefaultRunoffCoefficients["SaunaAI"])) },
             {  "SchoolAI", new runoffStruct( "Schools",  PlayerPrefs.GetFloat("RF_SchoolAI", DefaultRunoffCoefficients["SchoolAI"])) },
+            {  "TourBuildingAI", new runoffStruct( "Tour Building",  PlayerPrefs.GetFloat("RF_TourBulidingAI", DefaultRunoffCoefficients["TourBuildingAI"])) },
+            {  "DisasterResponseBuildingAI", new runoffStruct( "Disaster Response",  PlayerPrefs.GetFloat("RF_DisasterResponseBuildingAI", DefaultRunoffCoefficients["DisasterResponseBuildingAI"])) },
+            {  "MonumentAI", new runoffStruct( "Mon's, Museums, Lib's", PlayerPrefs.GetFloat("RF_MonumentAI", DefaultRunoffCoefficients["MonumentAI"]))},
             {  "OtherPlayerBuildingAI", new runoffStruct( "Other Player Buildings",  PlayerPrefs.GetFloat("RF_OtherPlayerBuildingAI", DefaultRunoffCoefficients["OtherPlayerBuildingAI"])) }
 
         };
         public static Dictionary<string, runoffStruct> PrivateBuildingsRunoffCoefficients = new Dictionary<string, runoffStruct>()
         {
             {  "LowDensityResidentialBuildingAI", new runoffStruct( "Low Density Residential",  PlayerPrefs.GetFloat("RF_LowDensityResidentialBuildingAI", DefaultRunoffCoefficients["LowDensityResidentialBuildingAI"])) },
-            {  "LowDensityCommercialBuildingAI", new runoffStruct( "Low Density Commercial",  PlayerPrefs.GetFloat("RF_LowDensityCommercialBuildingAI", DefaultRunoffCoefficients["LowDensityCommercialBuildingAI"])) },
             {  "HighDensityResidentialBuildingAI", new runoffStruct( "High Density Residentaial",  PlayerPrefs.GetFloat("RF_HighDensityResidentialBuildingAI", DefaultRunoffCoefficients["HighDensityResidentialBuildingAI"])) },
+            {  "LowDensityCommercialBuildingAI", new runoffStruct( "Low Density Commercial",  PlayerPrefs.GetFloat("RF_LowDensityCommercialBuildingAI", DefaultRunoffCoefficients["LowDensityCommercialBuildingAI"])) },
             {  "HighDensityCommercialBuildingAI", new runoffStruct( "High Density Commercial",  PlayerPrefs.GetFloat("RF_HighDensityCommercialBuildingAI", DefaultRunoffCoefficients["HighDensityCommercialBuildingAI"])) },
-            {  "FarmingIndustrialBuildingAI", new runoffStruct( "Farming Industry",  PlayerPrefs.GetFloat("RF_FamringIndustrialBuildingAI", DefaultRunoffCoefficients["FarmingIndustrialBuildingAI"])) },
+            {  "FarmingIndustrialBuildingAI", new runoffStruct( "Farming Industry",  PlayerPrefs.GetFloat("RF_FarmingIndustrialBuildingAI", DefaultRunoffCoefficients["FarmingIndustrialBuildingAI"])) },
             {  "ForestryIndustrialBuildingAI", new runoffStruct( "Foresty Industry", PlayerPrefs.GetFloat("RF_ForestryIndustrialBuildingAI",  DefaultRunoffCoefficients["ForestryIndustrialBuildingAI"])) },
             {  "OreIndustrialBuildingAI", new runoffStruct( "Ore Industry",  PlayerPrefs.GetFloat("RF_OreIndustrialBuildingAI", DefaultRunoffCoefficients["OreIndustrialBuildingAI"])) },
             {  "OilIndustryBuildingAI", new runoffStruct( "Oil Industry",  PlayerPrefs.GetFloat("RF_OilIndustryBuildingAI", DefaultRunoffCoefficients["OilIndustryBuildingAI"])) },
             {  "GenericIndustryBuildingAI", new runoffStruct( "Generic Industry",  PlayerPrefs.GetFloat("RF_GenericIndustryBuildingAI", DefaultRunoffCoefficients["GenericIndustryBuildingAI"])) },
+            {  "OfficeBuildingAI", new runoffStruct( "Office",  PlayerPrefs.GetFloat("RF_OfficeBuildingAI", DefaultRunoffCoefficients["OfficeBuildingAI"])) },
             {  "OtherPrivateBuildingAI", new runoffStruct( "Other Zoned Buildings", PlayerPrefs.GetFloat("RF_OtherPrivateBuildingAI",  DefaultRunoffCoefficients["OtherPrivateBuildingAI"])) }
         };
+      
+        public static Dictionary<string, runoffStruct> PrivateBuildingRunoffModifiers = new Dictionary<string, runoffStruct>()
+        {
+            {"SelfSufficientModifier" , new runoffStruct("Self Sufficient Residential", PlayerPrefs.GetFloat("RF_SelfSufficientModifier", DefaultRunoffCoefficients["SelfSufficientModifier"]))},
+            {"TourismModifier" , new runoffStruct("Tourist Commercial ", PlayerPrefs.GetFloat("RF_TourismModifier", DefaultRunoffCoefficients["TourismModifier"]))},
+            {"LeisureModifier" , new runoffStruct("Lesiure Commercial ", PlayerPrefs.GetFloat("RF_LeisureModifier", DefaultRunoffCoefficients["LeisureModifier"]))},
+            {"OrganicModifier" , new runoffStruct("Organic Commercial ", PlayerPrefs.GetFloat("RF_OrganicModifier", DefaultRunoffCoefficients["OrganicModifier"]))},
+            {"HighTechModifier" , new runoffStruct("High Tech Office", PlayerPrefs.GetFloat("RF_HighTechModifier", DefaultRunoffCoefficients["HighTechModifier"]))},
+        };
 
+        public static Dictionary<Type, string> PublicBuildingAICatalog = new Dictionary<Type, string>()
+        {
+            {typeof(CemeteryAI), "CemetaryAI" },
+            {typeof(ParkAI), "ParkAI" },
+            {typeof(ParkGateAI), "ParkAI" },
+            {typeof(LandfillSiteAI), "LandfillSiteAI" },
+            {typeof(FireStationAI),  "FirestationAI"},
+            {typeof(FirewatchTowerAI), "FirestationAI" },
+            {typeof(PoliceStationAI), "PoliceStationAI" },
+            {typeof(HospitalAI),"HospitalAI" },
+            {typeof(PowerPlantAI), "PowerPlantAI" },
+            {typeof(HeatingPlantAI), "PowerPlantAI" },
+            {typeof(MonumentAI), "MonumentAI" },
+            {typeof(HadronColliderAI), "MonumentAI" },
+            {typeof(MuseumAI), "MonumentAI" },
+            {typeof(LibraryAI), "MonumentAI" },
+            {typeof(SpaceElevatorAI), "MonumentAI" },
+            {typeof(NaturalDrainageAI), "NaturalDrainageAI" },
+            {typeof(DepotAI), "DepotAI" },
+            {typeof(MaintenanceDepotAI), "DepotAI" },
+            {typeof(PostOfficeAI), "DepotAI" },
+            {typeof(CargoStationAI), "CargoStationAI" },
+            {typeof(SaunaAI), "SaunaAI" },
+            {typeof(SchoolAI), "SchoolAI" },
+            {typeof(MainCampusBuildingAI), "SchoolAI" },
+            {typeof(CampusBuildingAI), "SchoolAI" },
+            {typeof(TourBuildingAI), "TourBuildingAI" },
+            {typeof(DisasterResponseBuildingAI), "DisasterResponseBuildingAI" },
+            {typeof(DoomsdayVaultAI), "DisasterResponseBuildingAI" },
+            {typeof(HelicopterDepotAI), "DisasterResponseBuildingAI" },
+            {typeof(ShelterAI), "DisasterResponseBuildingAI" },
+            {typeof(IndustryBuildingAI), "Industry.GetSubService" },
+            {typeof(MainIndustryBuildingAI), "Industry.GetSubService" },
+            {typeof(AuxiliaryBuildingAI), "Industry.GetSubService" },
+            {typeof(ParkBuildingAI), "ParkBuilding.GetParkType" }
+
+        };
+
+        public static Dictionary<Type, runoffStruct> SegmentAIRunoffCoefficients = new Dictionary<Type, runoffStruct>()
+        {
+            {typeof(RoadAI), new runoffStruct("Roadways", PlayerPrefs.GetFloat("RF_RoadAI", DefaultRunoffCoefficients["RoadAI"])) },
+            {typeof(PedestrianPathAI), new runoffStruct("Pedestrian Paths", PlayerPrefs.GetFloat("RF_PedestrianPathAI",DefaultRunoffCoefficients["PedestrianPathAI"])) },
+            {typeof(PedestrianWayAI), new runoffStruct("Pedestrian Ways", PlayerPrefs.GetFloat("RF_PedestrianWayAI", DefaultRunoffCoefficients["PedestrianWayAI"])) },
+            {typeof(RunwayAI), new runoffStruct("Runways", PlayerPrefs.GetFloat("RF_RunwayAI", DefaultRunoffCoefficients["RunwayAI"])) },
+            {typeof(TaxiwayAI), new runoffStruct("Taxiways", PlayerPrefs.GetFloat("RF_TaxiwayAI", DefaultRunoffCoefficients["TaxiwayAI"])) },
+            {typeof(TrainTrackBaseAI), new runoffStruct("Train Tracks", PlayerPrefs.GetFloat("RF_TrainTrackBaseAI", DefaultRunoffCoefficients["TrainTrackBaseAI"])) },
+            {typeof(MetroTrackBaseAI), new runoffStruct("Metro Tracks", PlayerPrefs.GetFloat("RF_MetroTrackBaseAI", DefaultRunoffCoefficients["MetroTrackBaseAI"])) },
+            {typeof(MonorailTrackAI), new runoffStruct("Monorail", PlayerPrefs.GetFloat("RF_MonorailTrackAI", DefaultRunoffCoefficients["MonorailTrackAI"])) },
+        };
         public static bool setRunoffCoefficient(string name, float value)
         {
             if (PublicBuildingsRunoffCoefficients.ContainsKey(name))
@@ -410,55 +414,30 @@ namespace Rainfall
                 runoffStruct tempRunoffCoefficient = PublicBuildingsRunoffCoefficients[name];
                 tempRunoffCoefficient.Coefficient = value;
                 PublicBuildingsRunoffCoefficients[name] = tempRunoffCoefficient;
-                PlayerPrefs.SetFloat("RF_"+name, value);
+                PlayerPrefs.SetFloat("RF_" + name, value);
                 return true;
-            } else if (PrivateBuildingsRunoffCoefficients.ContainsKey(name)) {
+            }
+            else if (PrivateBuildingsRunoffCoefficients.ContainsKey(name))
+            {
                 runoffStruct tempRunoffCoefficient = PrivateBuildingsRunoffCoefficients[name];
                 tempRunoffCoefficient.Coefficient = value;
                 PrivateBuildingsRunoffCoefficients[name] = tempRunoffCoefficient;
-                PlayerPrefs.SetFloat("RF_"+name, value);
+                PlayerPrefs.SetFloat("RF_" + name, value);
+                return true;
+            }
+            else if (PrivateBuildingRunoffModifiers.ContainsKey(name))
+            {
+                runoffStruct tempRunoffCoefficient = PrivateBuildingRunoffModifiers[name];
+                tempRunoffCoefficient.Coefficient = value;
+                PrivateBuildingRunoffModifiers[name] = tempRunoffCoefficient;
+                PlayerPrefs.SetFloat("RF_" + name, value);
                 return true;
             }
             return false;
         }
-   
-        /*
-        private static bool _districtControl;
-        private static int? _districtControlInt;
-        public static bool DistrictControl
-        {
-            get
-            {
-                if (_districtControlInt == null)
-                {
-                    _districtControlInt = PlayerPrefs.GetInt("RF_DistrictControl", 1);
-                }
-                if (_districtControlInt == 1)
-                {
-                    _districtControl = true;
-                }
-                else
-                {
-                    _districtControl = false;
-                }
-                return _districtControl;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _districtControlInt = 1;
-                }
-                else
-                {
-                    _districtControlInt = 0;
-                }
-                PlayerPrefs.SetInt("RF_DistrictControl", (int)_districtControlInt);
+        
 
-
-            }
-        }
-        */
+       
         private static int? _buildingFloodingTolerance;
         public const int _defaultBuildingFloodingTolerance = 50;
         public const int _minFloodTolerance = 0;
@@ -610,7 +589,7 @@ namespace Rainfall
             }
             set
             {
-                if (value > 200f || value < 0f)
+                if (value > (float)_maxPadIncrease || value < 0f)
                     throw new ArgumentOutOfRangeException();
                 if (value == _IncreaseBuildingPadHeight)
                 {
@@ -621,67 +600,44 @@ namespace Rainfall
             }
 
         }
-        private static int? _MaxBuildingPadHeight;
-        public const int _defaultMaxBuildingPadHeight = 200;
+       
 
-        public static int MaxBuildingPadHeight
+        private static bool _PadHeightIncreaseOptIn;
+        private static int? _PadHeightIncreaseOptInInt;
+        public static bool PadHeightIncreaseOptIn
         {
             get
             {
-                if (!_MaxBuildingPadHeight.HasValue)
+                if (_PadHeightIncreaseOptInInt == null)
                 {
-                    _MaxBuildingPadHeight = PlayerPrefs.GetInt("RF_MaxBuildingPadHeight", (int)_defaultMaxBuildingPadHeight);
+                    _PadHeightIncreaseOptInInt = PlayerPrefs.GetInt("RF_PadHeightIncreaseOptIn", 0);
                 }
-                return _MaxBuildingPadHeight.Value;
-            }
-            set
-            {
-                if (value > (float)_maxPadIncrease || value < 0f)
-                    throw new ArgumentOutOfRangeException();
-                if (value == _MaxBuildingPadHeight)
+                if (_PadHeightIncreaseOptInInt == 1)
                 {
-                    return;
-                }
-                PlayerPrefs.SetInt("RF_MaxBuildingPadHeight", value);
-                _MaxBuildingPadHeight = value;
-            }
-        }
-        private static bool _IncreaseExistingVanillaPadsOnLoad;
-        private static int? _IncreaseExistingVanillaPadsOnLoadInt;
-        public static bool IncreaseExistingVanillaPadsOnLoad
-        {
-            get
-            {
-                if (_IncreaseExistingVanillaPadsOnLoadInt == null)
-                {
-                    _IncreaseExistingVanillaPadsOnLoadInt = PlayerPrefs.GetInt("RF_IncreaseExistingVanillaPadsOnLoad", 0);
-                }
-                if (_IncreaseExistingVanillaPadsOnLoadInt == 1)
-                {
-                    _IncreaseExistingVanillaPadsOnLoad = true;
+                    _PadHeightIncreaseOptIn = true;
                 }
                 else
                 {
-                    _IncreaseExistingVanillaPadsOnLoad = false;
+                    _PadHeightIncreaseOptIn = false;
                 }
-                return _IncreaseExistingVanillaPadsOnLoad;
+                return _PadHeightIncreaseOptIn;
             }
             set
             {
                 if (value == true)
                 {
-                    _IncreaseExistingVanillaPadsOnLoadInt = 1;
+                    _PadHeightIncreaseOptInInt = 1;
                 }
                 else
                 {
-                    _IncreaseExistingVanillaPadsOnLoadInt = 0;
+                    _PadHeightIncreaseOptInInt = 0;
                 }
-                PlayerPrefs.SetInt("RF_IncreaseExistingVanillaPadsOnLoad", (int)_IncreaseExistingVanillaPadsOnLoadInt);
+                PlayerPrefs.SetInt("RF_PadHeightIncreaseOptIn", (int)_PadHeightIncreaseOptInInt);
 
 
             }
         }
-
+     
         private static int? _pedestrianPathFloodedTolerance;
         public const int _defaultPedestrianPathFloodedTolerance = 100;
 
@@ -841,43 +797,7 @@ namespace Rainfall
             }
         }
 
-        /*
-        private static bool _easyMode;
-        private static int? _easyModeInt;
-        public static bool EasyMode
-        {
-            get
-            {
-                if (_easyModeInt == null)
-                {
-                    _easyModeInt = PlayerPrefs.GetInt("RF_EasyMode", 0);
-                }
-                if (_easyModeInt == 1)
-                {
-                    _easyMode = true;
-                }
-                else
-                {
-                    _easyMode = false;
-                }
-                return _easyMode;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _easyModeInt = 1;
-                }
-                else
-                {
-                    _easyModeInt = 0;
-                }
-                PlayerPrefs.SetInt("RF_EasyMode", (int)_easyModeInt);
-
-
-            }
-        }
-        */
+       
         private static bool _simulatePollution;
         private static int? _simulatePollutionInt;
         public static bool SimulatePollution
@@ -913,43 +833,7 @@ namespace Rainfall
 
             }
         }
-        /*
-        private static bool _improvedInletMechanics;
-        private static int? _improvedInletMechanicsInt;
-        public static bool ImprovedInletMechanics
-        {
-            get
-            {
-                if (_improvedInletMechanicsInt == null)
-                {
-                    _improvedInletMechanicsInt = PlayerPrefs.GetInt("RF_SimulatePollution", 1);
-                }
-                if (_improvedInletMechanicsInt == 1)
-                {
-                    _improvedInletMechanics = true;
-                }
-                else
-                {
-                    _improvedInletMechanics = false;
-                }
-                return _improvedInletMechanics;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _improvedInletMechanicsInt = 1;
-                }
-                else
-                {
-                    _improvedInletMechanicsInt = 0;
-                }
-                PlayerPrefs.SetInt("RF_ImprovedInletMechanics", (int)_improvedInletMechanicsInt);
-
-
-            }
-        }
-        */
+       
         private static bool _preventRainBeforeMilestone;
         private static int? _preventRainBeforeMilestoneInt;
         public static bool PreventRainBeforeMilestone
@@ -981,41 +865,6 @@ namespace Rainfall
                     _preventRainBeforeMilestoneInt = 0;
                 }
                 PlayerPrefs.SetInt("RF_PreventRainBeforeMilestone", (int)_preventRainBeforeMilestoneInt);
-
-
-            }
-        }
-        private static bool _AdditionalIncreaseForLowerPads;
-        private static int? _AdditionalIncreaseForLowerPadsInt;
-        public static bool AdditionalIncreaseForLowerPads
-        {
-            get
-            {
-                if (_AdditionalIncreaseForLowerPadsInt == null)
-                {
-                    _AdditionalIncreaseForLowerPadsInt = PlayerPrefs.GetInt("RF_AdditionalIncreaseForLowerPads", 0);
-                }
-                if (_AdditionalIncreaseForLowerPadsInt == 1)
-                {
-                    _AdditionalIncreaseForLowerPads = true;
-                }
-                else
-                {
-                    _AdditionalIncreaseForLowerPads = false;
-                }
-                return _AdditionalIncreaseForLowerPads;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _AdditionalIncreaseForLowerPadsInt = 1;
-                }
-                else
-                {
-                    _AdditionalIncreaseForLowerPadsInt = 0;
-                }
-                PlayerPrefs.SetInt("RF_AdditionalIncreaseForLowerPads", (int)_AdditionalIncreaseForLowerPadsInt);
 
 
             }
@@ -1057,47 +906,140 @@ namespace Rainfall
             }
         }
 
+        private static bool _automaticPipeLaterals;
+        private static int? _automaticPipeLateralsInt;
+        public static bool AutomaticPipeLaterals
+        {
+            get
+            {
+                if (_automaticPipeLateralsInt == null)
+                {
+                    _automaticPipeLateralsInt = PlayerPrefs.GetInt("RF_AutomaticPipeLaterals", 1);
+                }
+                if (_automaticPipeLateralsInt == 1)
+                {
+                    _automaticPipeLaterals = true;
+                }
+                else
+                {
+                    _automaticPipeLaterals = false;
+                }
+                return _automaticPipeLaterals;
+            }
+            set
+            {
+                if (value == true)
+                {
+                    _automaticPipeLateralsInt = 1;
+                }
+                else
+                {
+                    _automaticPipeLateralsInt = 0;
+                }
+                PlayerPrefs.SetInt("RF_AutomaticPipeLaterals", (int)_automaticPipeLateralsInt);
+
+
+            }
+        }
+
+        
+        private static int _defaultDrainageBasinGridOption = 1;//Owned tiles
+        public static int SelectedDrainageBasinGridOption
+        {
+            get
+            {
+                return PlayerPrefs.GetInt("RF_SelectedDrainageBasinGridOption", _defaultDrainageBasinGridOption);
+            }
+            set
+            {
+                if (value >= 0 && value < DrainageBasinGrid.gridOptionNames.Count)
+                    PlayerPrefs.SetInt("RF_SelectedDrainageBasinGridOption", value);
+            }
+        }
+
         public static void resetModSettings()
         {
             ModSettings.Difficulty = 100;
+            ModSettings.SnowmeltFactor = ModSettings._defaultSnowMeltFactor;
             ModSettings.RefreshRate = 5;
             ModSettings.PreviousStormOption = _defaultPreviousStormOption;
-            ModSettings.TimeScale = DefaultTimeScale;
+            
             ModSettings.ChirpForecasts = true;
             ModSettings.ChirpRainTweets = true;
-            ModSettings.AutomaticStormDistribution = true;
-            ModSettings.StormDistributionName = DefaultStormDistributionName;
-            ModSettings.CityName = DefaultCityName;
-            ModSettings.MinimumStormDuration = (int)ModSettings._minStormDuration;
-            ModSettings.MaximumStormDuration = (int)ModSettings._maxStormDuration;
-            ModSettings.MaximumStormIntensity = (int)ModSettings._maxStormIntensity;
-            //ModSettings.DistrictControl = true;
-            ModSettings.BuildingFloodedTolerance = _defaultBuildingFloodedTolerance;
-            ModSettings.BuildingFloodingTolerance = _defaultBuildingFloodingTolerance;
-            ModSettings.RoadwayFloodedTolerance = _defaultRoadwayFloodedTolerance;
-            ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
-            ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
-            ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
-            ModSettings.TrainTrackFloodedTolerance = _defaultTrainTrackFloodedTolerance;
-            ModSettings.TrainTrackFloodingTolerance = _defaultTrainTrackFloodingTolerance;
+            ModSettings.AutomaticPipeLaterals = true;
+          
+           
+            if (ModSettings.MaximumStormDuration > (int)ModSettings._defaultMinStormDuration)
+            {
+                ModSettings.MinimumStormDuration = (int)ModSettings._defaultMinStormDuration;
+                ModSettings.MaximumStormDuration = (int)ModSettings._defaultMaxStormDuration;
+            } else
+            {
+                ModSettings.MaximumStormDuration = (int)ModSettings._defaultMaxStormDuration;
+                ModSettings.MinimumStormDuration = (int)ModSettings._defaultMinStormDuration;
+            }
+            ModSettings.MaximumStormIntensity = (int)ModSettings._defaultStormIntensity;
+          
+            if (ModSettings.BuildingFloodedTolerance > _defaultBuildingFloodingTolerance)
+            {
+                ModSettings.BuildingFloodingTolerance = _defaultBuildingFloodingTolerance;
+                ModSettings.BuildingFloodedTolerance = _defaultBuildingFloodedTolerance;
+            } else
+            {
+                ModSettings.BuildingFloodedTolerance = _defaultBuildingFloodedTolerance;
+                ModSettings.BuildingFloodingTolerance = _defaultBuildingFloodingTolerance;
+            }
+            if (ModSettings.RoadwayFloodedTolerance > _defaultRoadwayFloodingTolerance)
+            {
+                ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
+                ModSettings.RoadwayFloodedTolerance = _defaultRoadwayFloodedTolerance;
+            } else
+            {
+                ModSettings.RoadwayFloodedTolerance = _defaultRoadwayFloodedTolerance;
+                ModSettings.RoadwayFloodingTolerance = _defaultRoadwayFloodingTolerance;
+            }
+            if (ModSettings.PedestrianPathFloodedTolerance > _defaultPedestrianPathFloodingTolerance)
+            {
+                ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
+                ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
+            }
+            else
+            {
+                ModSettings.PedestrianPathFloodedTolerance = _defaultPedestrianPathFloodedTolerance;
+                ModSettings.PedestrianPathFloodingTolerance = _defaultPedestrianPathFloodingTolerance;
+            }
+            if (ModSettings.TrainTrackFloodedTolerance > _defaultTrainTrackFloodingTolerance)
+            {
+                ModSettings.TrainTrackFloodingTolerance = _defaultTrainTrackFloodingTolerance;
+                ModSettings.TrainTrackFloodedTolerance = _defaultTrainTrackFloodedTolerance;
+            } else
+            {
+                ModSettings.TrainTrackFloodedTolerance = _defaultTrainTrackFloodedTolerance;
+                ModSettings.TrainTrackFloodingTolerance = _defaultTrainTrackFloodingTolerance;
+            }
             ModSettings.IncreaseBuildingPadHeight = _defaultIncreaseBuildingPadHeight;
-            ModSettings.IncreaseExistingVanillaPadsOnLoad = false;
-            ModSettings.MaxBuildingPadHeight = _defaultMaxBuildingPadHeight;
-            ModSettings.AdditionalIncreaseForLowerPads = false;
+          
+            ModSettings.PadHeightIncreaseOptIn = false;
+           
             ModSettings.FreezeLandvalues = true;
-            //ModSettings.EasyMode = false;
+        
             ModSettings.SimulatePollution = true;
             ModSettings.PreventRainBeforeMilestone = true;
             ModSettings.GravityDrainageOption = _defaultGravityDrainageOption;
             ModSettings.StormDrainAssetControlOption = _defaultStormDrainAssetControlOption;
             ModSettings.AdditionalToleranceOnSlopes = true;
-            //ModSettings.ImprovedInletMechanics = true;
-            foreach (KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
+            ModSettings.SelectedDrainageBasinGridOption = ModSettings._defaultDrainageBasinGridOption;
+            try
             {
-                setRunoffCoefficient(pair.Key, DefaultRunoffCoefficients[pair.Key]);
+                foreach (KeyValuePair<string, float> pair in DefaultRunoffCoefficients)
+                {
+                    setRunoffCoefficient(pair.Key, DefaultRunoffCoefficients[pair.Key]);
+                }
+            } catch(Exception e)
+            {
+                Debug.Log("[RF]Modsettings.ResetModSettings() Tried to reset Runoff Coefficients but encountered error " + e.ToString());
             }
-            
-
+            Debug.Log("[RF]Modsettings.ResetModSettings() Restet all settings.");
         }
 
     }

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-namespace Rainfall.UI
+namespace Rainfall
 {
     public abstract class OptionsItemBase
     {

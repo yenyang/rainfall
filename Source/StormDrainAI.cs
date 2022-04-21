@@ -4,8 +4,6 @@ using ColossalFramework.Globalization;
 using ColossalFramework.Math;
 using System.Text;
 using System;
-using Rainfall.Redirection;
-
 using UnityEngine;
 
 namespace Rainfall
@@ -70,14 +68,17 @@ namespace Rainfall
         [CustomizableProperty("Milestone", "Water")]
         public int m_milestone = 0;
 
+        [CustomizableProperty("Procedurally Generate Inlets", "Water")]
+        public bool m_procedurally_generate_inlets = false;
 
-        
         [CustomizableProperty("Placement Mode", "Water")]
         public BuildingInfo.PlacementMode m_placementMode = BuildingInfo.PlacementMode.OnTerrain;
 
         [CustomizableProperty("Placement Mode Alt", "Water")]
         public BuildingInfo.PlacementMode m_placementModeAlt = BuildingInfo.PlacementMode.Shoreline;
 
+
+        string currentElevation = "0";
         //private bool buildingToolIsDetoured = false;
 
         public override void GetNaturalResourceRadius(ushort buildingID, ref Building data, out NaturalResourceManager.Resource resource1, out Vector3 position1, out float radius1, out NaturalResourceManager.Resource resource2, out Vector3 position2, out float radius2)
@@ -110,7 +111,7 @@ namespace Rainfall
         {
             if (infoMode == InfoManager.InfoMode.Water)
             {
-                
+
                 if ((data.m_flags & Building.Flags.Active) == Building.Flags.None)
                 {
                     return Singleton<InfoManager>.instance.m_properties.m_modeProperties[(int)infoMode].m_inactiveColor;
@@ -186,22 +187,26 @@ namespace Rainfall
             if (this.m_stormWaterDetention != 0)
             {
                 return productionRate * (this.m_stormWaterDetention) / 100;
+            } else if (this.m_stormWaterIntake != 0)
+            {
+                return productionRate * Mathf.RoundToInt(OptionHandler.getSliderSetting("InletRateMultiplier") * (float)this.m_stormWaterIntake) / 100;
             }
-            return productionRate * (this.m_stormWaterIntake - this.m_stormWaterOutlet) / 100;
+
+            return productionRate * Mathf.RoundToInt(OptionHandler.getSliderSetting("OutletRateMultiplier")*(float)this.m_stormWaterOutlet) / 100; 
         }
-      
+
         public override void GetPlacementInfoMode(out InfoManager.InfoMode mode, out InfoManager.SubInfoMode subMode, float elevation)
         {
-            if (this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0)
+            /*if (this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0)
             {
                 mode = InfoManager.InfoMode.TerrainHeight;
                 subMode = InfoManager.SubInfoMode.NormalWater;
             }
             else
-            {
+            {*/
                 mode = InfoManager.InfoMode.Water;
                 subMode = InfoManager.SubInfoMode.WaterPower;
-            }
+            //}
 
 
         }
@@ -214,13 +219,84 @@ namespace Rainfall
             if (this.m_stormWaterIntake > 0)
             {
                 Hydraulics.addInlet(buildingID);
-               
-            } else if (this.m_stormWaterOutlet > 0)
+                Building currentBuilding = BuildingManager.instance.m_buildings.m_buffer[buildingID];
+
+                //currentBuilding.Info.m_autoRemove = true;
+
+            }
+            else if (this.m_stormWaterOutlet > 0)
             {
                 Hydraulics.addOutlet(buildingID);
-            } else if (this.m_stormWaterDetention > 0) {
+            }
+            else if (this.m_stormWaterDetention > 0)
+            {
                 Hydraulics.addDetentionBasin(buildingID);
             }
+            if (OptionHandler.getCheckboxSetting("AutomaticPipeLaterals"))
+            {
+                Building currentBuilding = BuildingManager.instance.m_buildings.m_buffer[buildingID];
+                //Debug.Log("[RF]SDAI.createBuilding buildign netnode = " + currentBuilding.m_netNode.ToString());
+                ushort inletNodeID = currentBuilding.m_netNode;
+                Vector3 inletPosition = currentBuilding.m_position;
+                Vector3 pipePosition = new Vector3();
+                Vector3 lateralDirection = new Vector3();
+                ushort targetPipeID = 0;
+
+                ushort newNodeID = 0;
+                bool flag = SnapToSegment(inletPosition, out pipePosition, out lateralDirection, 8f, 90f, ItemClass.Service.Water, out targetPipeID);
+                if (flag == true)
+                {
+                    bool flag2 = SplitSegment(targetPipeID, out newNodeID, pipePosition);
+                    if (flag2)
+                    {
+                        //Debug.Log("[RF]SDAI.createBuilding split segment!");
+                        ushort newPipeLateralID = 0;
+                        NetSegment targetPipe = Singleton<NetManager>.instance.m_segments.m_buffer[targetPipeID];
+                        NetInfo info = targetPipe.Info;
+                        uint buildIndex = targetPipe.m_buildIndex;
+                        bool flag3 = Singleton<NetManager>.instance.CreateSegment(out newPipeLateralID, ref Singleton<SimulationManager>.instance.m_randomizer, info, targetPipe.TreeInfo, inletNodeID, newNodeID, lateralDirection, -lateralDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (targetPipe.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
+                        if (flag3)
+                        {
+                            // Debug.Log("[RF]SDAI.createBuilding created pipe lateral!");
+                        }
+                    }
+                } else if (SnapToSegment(inletPosition, out pipePosition, out lateralDirection, 0f, 8f, ItemClass.Service.Water, out targetPipeID))
+                {
+                    //Debug.Log("[RF]SDAI.CreateBuilding snap to segment close");
+                    NetSegment targetPipe = Singleton<NetManager>.instance.m_segments.m_buffer[targetPipeID];
+                    NetNode startNode = Singleton<NetManager>.instance.m_nodes.m_buffer[targetPipe.m_startNode];
+                    NetNode endNode = Singleton<NetManager>.instance.m_nodes.m_buffer[targetPipe.m_endNode];
+                    Vector3 startPosition = startNode.m_position;
+                    float firstSegmentLength = Vector3.Distance(startPosition, inletPosition);//Mathf.Sqrt(Mathf.Pow(inletPosition.x - startPosition.x,2) + Mathf.Pow(inletPosition.y - startPosition.y,2)+ Mathf.Pow(inletPosition.z - startPosition.z,2));
+                    Vector3 endPosition = endNode.m_position;
+                    float secondSegmentLength = Vector3.Distance(inletPosition, endPosition);//Mathf.Sqrt(Mathf.Pow(endPosition.x - inletPosition.x, 2) + Mathf.Pow(endPosition.y - inletPosition.y, 2) + Mathf.Pow(endPosition.z - inletPosition.z, 2));
+                    
+                    if (firstSegmentLength > 8f && secondSegmentLength > 8f) {
+                        ushort firstPipeLateralID = 0;
+                        ushort secondPipeLateralID = 0;
+                        NetInfo info = targetPipe.Info;
+                        ushort startNodeID = targetPipe.m_startNode;
+                        ushort endNodeID = targetPipe.m_endNode;
+                        uint buildIndex = targetPipe.m_buildIndex;
+                        Singleton<NetManager>.instance.ReleaseSegment(targetPipeID, true);
+                        Vector3 firstSegmentDirection = new Vector3(inletPosition.x - startPosition.x, 0, inletPosition.z - startPosition.z);
+                        Vector3 secondSegmentDirection = new Vector3(endPosition.x - inletPosition.x, 0, endPosition.z - inletPosition.z);
+                        firstSegmentDirection = firstSegmentDirection.normalized;
+                        secondSegmentDirection = secondSegmentDirection.normalized;
+                        
+                        bool flag4 = Singleton<NetManager>.instance.CreateSegment(out firstPipeLateralID, ref Singleton<SimulationManager>.instance.m_randomizer, info, targetPipe.TreeInfo, startNodeID, inletNodeID, firstSegmentDirection, -firstSegmentDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (targetPipe.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
+                        bool flag5 = Singleton<NetManager>.instance.CreateSegment(out secondPipeLateralID, ref Singleton<SimulationManager>.instance.m_randomizer, info, targetPipe.TreeInfo, inletNodeID, endNodeID, secondSegmentDirection, -secondSegmentDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (targetPipe.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
+                        if (flag4 && flag5)
+                        {
+                           // Debug.Log("[RF]SDAI.createBuilding split pipe main");
+                        }
+                    }
+
+                }
+                // add in split pipes if node is too close to existing pipe.
+            }
+            
+           
         }
         /*
         public override string GenerateName(ushort buildingID, InstanceID caller)
@@ -247,7 +323,7 @@ namespace Rainfall
                 Hydraulics.removeDetentionBasin(buildingID);
             }
             base.ReleaseBuilding(buildingID, ref data);
-           
+
         }
 
         protected override void ManualActivation(ushort buildingID, ref Building buildingData)
@@ -288,12 +364,13 @@ namespace Rainfall
                 bool flag;
                 this.GetConstructionCost(relocateID != 0, out constructionCost, out flag);
                 productionRate = 0;
-               
-                return ToolBase.ToolErrors.None;
-            } else if (this.m_info.m_placementMode != this.m_placementMode) {
+
+            }
+            else if (this.m_info.m_placementMode != this.m_placementMode)
+            {
                 this.m_info.m_placementMode = this.m_placementMode;
             }
-            if (this.m_stormWaterIntake > 0)
+            if (this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0)
             {
                 Vector3 finalPosition;
                 Vector3 finalAngle;
@@ -307,36 +384,64 @@ namespace Rainfall
                     position.z = finalPosition.z;
                     //Debug.Log("[RF].StormDrainAI.CheckBuildPosition new position x,z = " + position.x.ToString() + "," + position.z.ToString());
                 }
+                bool flag;
+                this.GetConstructionCost(relocateID != 0, out constructionCost, out flag);
+                productionRate = 0;
+                this.currentElevation = position.y.ToString("0.00");
+                return ToolBase.ToolErrors.None;
 
             }
-
+            /*
             if (this.m_stormWaterDetention != 0 || this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0 || this.m_stormWaterOutlet > 0 || this.m_culvert == true)
             {
                 bool flag;
                 this.GetConstructionCost(relocateID != 0, out constructionCost, out flag);
                 productionRate = 0;
-                
+                this.currentElevation = position.y.ToString("0.00");
                 return ToolBase.ToolErrors.None;
-            }
+            }*/
             ToolBase.ToolErrors toolErrors = base.CheckBuildPosition(relocateID, ref position, ref angle, waterHeight, elevation, ref connectionSegment, out productionRate, out constructionCost);
-            Vector3 vector = Building.CalculatePosition(position, angle, this.m_waterLocationOffset);
-            Vector3 a;
-            Vector3 a2;
-            bool flag1;
-            if (BuildingTool.SnapToCanal(position, out a, out a2, out flag1, 40f, true) && this.m_stormWaterIntake <= 0)
+            Vector3 position2 = Building.CalculatePosition(position, angle, m_waterLocationOffset);
+            position2.y = 0f;
+            Vector3 pos;
+            Vector3 dir;
+            bool flag2;
+
+            if (BuildingTool.SnapToCanal(position, out pos, out dir, out flag2, 40f, center: true))
             {
-                angle = Mathf.Atan2(a2.x, -a2.z);
-                a -= a2 * this.m_waterLocationOffset.z;
-                position.x = a.x;
-                position.z = a.z;
+                position2 = pos;
+                position2.y = 0f;
+                if (this.m_stormWaterOutlet > 0 || Singleton<TerrainManager>.instance.GetClosestWaterPos(ref position2, m_maxWaterDistance * 0.5f))
+                {
+                    productionRate = 100;
+                }
+                else
+                {
+                    productionRate = 0;
+                }
+                angle = Mathf.Atan2(dir.x, 0f - dir.z);
+                pos -= dir * this.m_waterLocationOffset.z;
+                //Debug.Log("[RF]StormDrainAI WLO = " + this.m_waterLocationOffset.z.ToString());
+                position.x = pos.x;
+                position.z = pos.z;
+                if (this.m_info.m_placementMode == BuildingInfo.PlacementMode.Roadside)
+                {
+                    if (this.m_info.m_placementMode == this.m_placementMode)
+                        this.m_info.m_placementMode = this.m_placementModeAlt;
+                    else
+                        this.m_info.m_placementMode = this.m_placementMode;
+                }
             }
-            else if (Singleton<TerrainManager>.instance.GetClosestWaterPos(ref vector, this.m_maxWaterDistance * 0.5f))
+            else if (Singleton<TerrainManager>.instance.GetClosestWaterPos(ref position2, this.m_maxWaterDistance * 0.5f))
             {
                 productionRate = 100;
-            } else
+            }
+            else
             {
                 productionRate = 0;
             }
+
+            this.currentElevation = position.y.ToString("0.00");
             return toolErrors;
         }
         /*
@@ -410,7 +515,7 @@ namespace Rainfall
           
             return result;
         }  */
-        
+
         private bool SnapToRoad(Vector3 refPos, out Vector3 pos, out Vector3 dir, float maxDistance)
         {
             bool result = false;
@@ -420,16 +525,16 @@ namespace Rainfall
             float minZ = refPos.z - maxDistance - 100f;
             float maxX = refPos.x + maxDistance + 100f;
             float maxZ = refPos.z + maxDistance + 100f;
-            int minXint = Mathf.Max((int)(minX/64f +135f), 0);
+            int minXint = Mathf.Max((int)(minX / 64f + 135f), 0);
             int minZint = Mathf.Max((int)(minZ / 64f + 135f), 0);
-            int maxXint = Mathf.Max((int)(maxX / 64f + 135f), 269);
-            int maxZint = Mathf.Max((int)(maxZ / 64f + 135f), 269);
+            int maxXint = Mathf.Min((int)(maxX / 64f + 135f), 269);
+            int maxZint = Mathf.Min((int)(maxZ / 64f + 135f), 269);
 
             Array16<NetSegment> segments = Singleton<NetManager>.instance.m_segments;
             ushort[] segmentGrid = Singleton<NetManager>.instance.m_segmentGrid;
-            for (int i=minZint; i <= maxZint; i++)
+            for (int i = minZint; i <= maxZint; i++)
             {
-                for (int j=minXint; j<=maxXint; j++)
+                for (int j = minXint; j <= maxXint; j++)
                 {
                     ushort segmentGridZX = segmentGrid[i * 270 + j];
                     int iterator = 0;
@@ -456,7 +561,7 @@ namespace Rainfall
                                         //Debug.Log("[RF]StormDrainAI.SnapToRoad distance to road = " + distanceToRoad);
                                         Vector3 vector2 = new Vector3(centerDirection.z, 0f, -centerDirection.x);
                                         dir = vector2.normalized;
-                                        if (Vector3.Dot(centerPos-refPos,dir) < 0f)
+                                        if (Vector3.Dot(centerPos - refPos, dir) < 0f)
                                         {
                                             dir = -dir;
                                         }
@@ -465,8 +570,8 @@ namespace Rainfall
                                         result = true;
                                         //Debug.Log("[RF].StormDrainAI.SnapToRoad = true");
                                     }
-                                   
-                                   
+
+
                                 }
                             }
                         }
@@ -480,7 +585,103 @@ namespace Rainfall
                 }
             }
             //if (result == false)
-                //Debug.Log("[RF].StormDrainAI.SnapToRoad = false");
+            //Debug.Log("[RF].StormDrainAI.SnapToRoad = false");
+            return result;
+        }
+        private bool SnapToSegment(Vector3 refPos, out Vector3 pos, out Vector3 dir, float minDistance, float maxDistance, ItemClass.Service segmentType, out ushort segmentID)
+        {
+            bool result = false;
+            pos = refPos;
+            dir = Vector3.forward;
+            float minX = refPos.x - maxDistance - 100f;
+            float minZ = refPos.z - maxDistance - 100f;
+            float maxX = refPos.x + maxDistance + 100f;
+            float maxZ = refPos.z + maxDistance + 100f;
+            int minXint = Mathf.Max((int)(minX / 64f + 135f), 0);
+            int minZint = Mathf.Max((int)(minZ / 64f + 135f), 0);
+            int maxXint = Mathf.Min((int)(maxX / 64f + 135f), 269);
+            int maxZint = Mathf.Min((int)(maxZ / 64f + 135f), 269);
+            segmentID = 0;
+
+            Array16<NetSegment> segments = Singleton<NetManager>.instance.m_segments;
+            ushort[] segmentGrid = Singleton<NetManager>.instance.m_segmentGrid;
+            for (int i = minZint; i <= maxZint; i++)
+            {
+                for (int j = minXint; j <= maxXint; j++)
+                {
+                    ushort segmentGridZX = segmentGrid[i * 270 + j];
+                    int iterator = 0;
+                    while (segmentGridZX != 0)
+                    {
+                        NetSegment.Flags flags = segments.m_buffer[(int)segmentGridZX].m_flags;
+                        if ((flags & (NetSegment.Flags.Created | NetSegment.Flags.Deleted)) == NetSegment.Flags.Created)
+                        {
+                            NetInfo info = segments.m_buffer[(int)segmentGridZX].Info;
+                            if (info.m_class.m_service == segmentType)
+                            {
+                                Vector3 min = segments.m_buffer[(int)segmentGridZX].m_bounds.min;
+                                Vector3 max = segments.m_buffer[(int)segmentGridZX].m_bounds.max;
+                                if (min.x < maxX && min.z < maxZ && max.x > minX && max.z > minZ)
+                                {
+                                    Vector3 centerPos;
+                                    Vector3 centerDirection;
+                                    segments.m_buffer[(int)segmentGridZX].GetClosestPositionAndDirection(refPos, out centerPos, out centerDirection);
+                                    //Debug.Log("[RF]StormDrainAI.SnapToRoad refPos = " + refPos.ToString());
+                                    //Debug.Log("[RF]StormDrainAI.SnapToRoad CenterPos = " + centerPos.ToString());
+                                    float distanceToSegment = Vector3.Distance(centerPos, refPos) - info.m_halfWidth;
+                                    if (distanceToSegment < maxDistance)
+                                    {
+                                        //Debug.Log("[RF]StormDrainAI.SnapToRoad distance to road = " + distanceToRoad);
+                                        NetSegment currentSegment = segments.m_buffer[(int)segmentGridZX];
+                                        NetNode startNode = Singleton<NetManager>.instance.m_nodes.m_buffer[currentSegment.m_startNode];
+                                        NetNode endNode = Singleton<NetManager>.instance.m_nodes.m_buffer[currentSegment.m_endNode];
+                                        if (Vector3.Distance(startNode.m_position, centerPos) < minDistance && Vector3.Distance(startNode.m_position, centerPos) < Vector3.Distance(endNode.m_position, centerPos))
+                                            centerPos = startNode.m_position;
+                                        if (Vector3.Distance(endNode.m_position, centerPos) < minDistance && Vector3.Distance(endNode.m_position, centerPos) < Vector3.Distance(startNode.m_position, centerPos))
+                                            centerPos = endNode.m_position;
+                                        if (centerPos != startNode.m_position && centerPos != endNode.m_position)
+                                        {
+                                            Vector3 vector2 = new Vector3(centerDirection.z, 0f, -centerDirection.x);
+                                            dir = vector2.normalized;
+                                            if (Vector3.Dot(centerPos - refPos, dir) < 0f)
+                                            {
+                                                dir = -dir;
+                                            }
+                                        } else
+                                        {
+                                            Vector3 vector2 = new Vector3(centerPos.x - refPos.x, 0f, centerPos.z - refPos.z);
+                                            dir = vector2.normalized;
+                                            if (Vector3.Dot(centerPos - refPos, dir) < 0f)
+                                            {
+                                                dir = -dir;
+                                            }
+                                        }
+
+                                        pos = centerPos;
+                                        maxDistance = distanceToSegment;
+                                        segmentID = segmentGridZX;
+                                        result = true;
+                                        if (distanceToSegment < minDistance)
+                                            return false;
+
+                                        //Debug.Log("[RF].StormDrainAI.SnapToRoad = true");
+                                    }
+
+
+                                }
+                            }
+                        }
+                        segmentGridZX = segments.m_buffer[(int)segmentGridZX].m_nextGridSegment;
+                        if (++iterator >= 32768)
+                        {
+                            Debug.Log("[RF].StormDrainAI.SnapToRoad Invalid List Detected!!!");
+                            break;
+                        }
+                    }
+                }
+            }
+            //if (result == false)
+            //Debug.Log("[RF].StormDrainAI.SnapToRoad = false");
             return result;
         }
         protected override void HandleWorkAndVisitPlaces(ushort buildingID, ref Building buildingData, ref Citizen.BehaviourData behaviour, ref int aliveWorkerCount, ref int totalWorkerCount, ref int workPlaceCount, ref int aliveVisitorCount, ref int totalVisitorCount, ref int visitPlaceCount)
@@ -493,6 +694,7 @@ namespace Rainfall
 
         protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, int finalProductionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
         {
+            
             if (finalProductionRate != 0)
             {
                 Hydraulics.updateDistrictAndDrainageGroup(buildingID);
@@ -519,7 +721,7 @@ namespace Rainfall
                 //Debug.Log("[RF] Starting Produce Goods for Building " + buildingID.ToString());
                 DistrictManager instance2 = Singleton<DistrictManager>.instance;
                 byte district = instance2.GetDistrict(buildingData.m_position);
-                int stormWaterIntake = this.m_stormWaterIntake * finalProductionRate / 100;
+                int stormWaterIntake = Mathf.RoundToInt(OptionHandler.getSliderSetting("InletRateMultiplier")*(float)this.m_stormWaterIntake) * finalProductionRate / 100;
                 //Debug.Log("[RF].StormDrainAI  Num = " + num.ToString());
                 if (stormWaterIntake != 0)
                 {
@@ -589,7 +791,7 @@ namespace Rainfall
                     int avgy;
                     int maxy;
                     Singleton<TerrainManager>.instance.CalculateAreaHeight(buildingData.m_position.x, buildingData.m_position.z, buildingData.m_position.x, buildingData.m_position.z, out miny, out avgy, out maxy);
-                    /*if (waterSurfaceElevation * 64 < miny &&  Hydraulics.getStormwaterAccumulation(buildingID) == 0 && ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption && this.m_electricityConsumption == 0  && Hydraulics.getHydraulicRate(buildingID) == 0 && ModSettings.ImprovedInletMechanics == true)
+                    /*if (waterSurfaceElevation * 64 < miny &&  Hydraulics.getStormwaterAccumulation(buildingID) == 0 && OptionHandler.getDropdownSetting("GravityDrainageOption") == ModSettings._ImprovedGravityDrainageOption && this.m_electricityConsumption == 0  && Hydraulics.getHydraulicRate(buildingID) == 0 && ModSettings.ImprovedInletMechanics == true)
                     {
                         finalProductionRate = 0;
 
@@ -678,7 +880,7 @@ namespace Rainfall
 
 
 
-                int stormWaterOutlet = this.m_stormWaterOutlet * finalProductionRate / 100;
+                int stormWaterOutlet = Mathf.RoundToInt(OptionHandler.getSliderSetting("OutletRateMultiplier")*(float)this.m_stormWaterOutlet) * finalProductionRate / 100;
                 //Debug.Log("[RF].StormDrainAI  Num7 = " + stormWaterOutlet.ToString());
                 if (stormWaterOutlet != 0)
                 {
@@ -708,12 +910,12 @@ namespace Rainfall
                     float SDfloodingDifferential = this.m_invert;
                     float SDfloodedDifferential = this.m_soffit;
                     int[] SDfloodingRateModifiers = new int[7] { 95, 90, 75, 50, 33, 25, 20 };
-                    if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption && this.m_culvert == false)
+                    if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
                     {
                         finalProductionRate = 20;
                         buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
                     }
-                    else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption && this.m_culvert == false)
+                    else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
                     {
                         if ((int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) >= 0 && (int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) < 7)
                         {
@@ -735,7 +937,7 @@ namespace Rainfall
                     {
                         finalProductionRate = 0;
                     }
-                    stormWaterOutlet = this.m_stormWaterOutlet * finalProductionRate / 100;
+                    stormWaterOutlet = Mathf.RoundToInt(OptionHandler.getSliderSetting("OutletRateMultiplier")*(float)this.m_stormWaterOutlet) * finalProductionRate / 100;
 
                     if (currentStormWaterAccumulation > 0 && districtDetainedStormwater >= districtDetentionCapacity * 0.8 && finalProductionRate > 0 || currentStormWaterAccumulation > 0 && districtDetentionCapacity == 0 && finalProductionRate > 0)
                     {
@@ -760,10 +962,11 @@ namespace Rainfall
                                     if (num12 == stormWaterOutlet)
                                     {
                                         //Debug.Log("[RF]StormDrainAI.produce good Full outlet");
-                                       
-                                    } else {
+
+                                    }
+                                    else {
                                         //Debug.Log("[RF]StormDrainAI.produce good Not Full outlet");
-                                       
+
                                     }
                                     dumpedQuantity = Hydraulics.removeAreaStormwaterAccumulation(num12, buildingID, false);
                                 }
@@ -777,7 +980,7 @@ namespace Rainfall
                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has flags " + buildingData.m_flags.ToString());
                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " has problems " + buildingData.m_problems.ToString());
                                         buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
-                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has problems " + buildingData.m_problems.ToString());
+                                        //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has problems " + buildingData.m_problems.ToString());
                                     }
 
                                 }
@@ -904,6 +1107,7 @@ namespace Rainfall
         }
         public override string GetConstructionInfo(int productionRate)
         {
+
             if (this.m_placementMode == this.m_placementModeAlt)
             {
                 return base.GetConstructionInfo(productionRate);
@@ -912,59 +1116,62 @@ namespace Rainfall
             {
                 if (this.m_placementMode == BuildingInfo.PlacementMode.OnGround)
                 {
-                    return ("Release ALT to Place On Ground.");
-                } else if (this.m_placementMode == BuildingInfo.PlacementMode.OnSurface) {
-                    return ("Release ALT to Place on Surface.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place On Ground.");
+                }
+                else if (this.m_placementMode == BuildingInfo.PlacementMode.OnSurface)
+                {
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on Surface.");
                 }
                 else if (this.m_placementMode == BuildingInfo.PlacementMode.OnTerrain)
                 {
-                    return ("Release ALT to Place on Terrain.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on Terrain.");
                 }
                 else if (this.m_placementMode == BuildingInfo.PlacementMode.OnWater)
                 {
-                    return ("Release ALT to Place on Water.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on Water.");
                 }
                 else if (this.m_placementMode == BuildingInfo.PlacementMode.Roadside)
                 {
-                    return ("Release ALT to Place on Roadside.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on Roadside.");
                 }
                 else if (this.m_placementMode == BuildingInfo.PlacementMode.Shoreline)
                 {
-                    return ("Release ALT to Place on a Shoreline.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on a Shoreline.");
                 }
                 else if (this.m_placementMode == BuildingInfo.PlacementMode.ShorelineOrGround)
                 {
-                    return ("Release ALT to Place on Shoreline or Ground.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Release ALT to Place on Shoreline or Ground.");
                 }
-            } else
+            }
+            else
             {
                 if (this.m_placementModeAlt == BuildingInfo.PlacementMode.OnGround)
                 {
-                    return ("Press ALT to Place On Ground.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place On Ground.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.OnSurface)
                 {
-                    return ("Press ALT to Place on Surface.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on Surface.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.OnTerrain)
                 {
-                    return ("Press ALT to Place on Terrain.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on Terrain.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.OnWater)
                 {
-                    return ("Press ALT to Place on Water.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on Water.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.Roadside)
                 {
-                    return ("Press ALT to Place on Roadside.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on Roadside.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.Shoreline)
                 {
-                    return ("Press ALT to Place on a Shoreline.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on a Shoreline.");
                 }
                 else if (this.m_placementModeAlt == BuildingInfo.PlacementMode.ShorelineOrGround)
                 {
-                    return ("Press ALT to Place on Shoreline or Ground.");
+                    return ("Current Elevation: " + this.currentElevation + System.Environment.NewLine + "Press ALT to Place on Shoreline or Ground.");
                 }
             }
             return base.GetConstructionInfo(productionRate);
@@ -1125,14 +1332,9 @@ namespace Rainfall
             //Debug.Log("[RF] num is " + ((int)num << 1).ToString());
             return (int)((int)num << 1);
         }
-        public override void PlacementFailed()
+        public override void PlacementFailed(ToolBase.ToolErrors errors)
         {
-
-            GuideController properties = Singleton<GuideManager>.instance.m_properties;
-            if (properties != null)
-            {
-                Singleton<BuildingManager>.instance.m_buildNextToWater.Activate(properties.m_buildNextToWater);
-            }
+            return;
 
         }
 
@@ -1161,7 +1363,7 @@ namespace Rainfall
                     drainPipeMissingGuide.Deactivate();
                 }
             }
-           
+
         }
 
         public override void UpdateGuide(GuideController guideController)
@@ -1256,21 +1458,23 @@ namespace Rainfall
             {
                 overrideDistrictControl = true;
             }
-            if (ModSettings.StormDrainAssetControlOption == ModSettings._DistrictControlOption || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == false)
+            if (OptionHandler.getDropdownSetting("StormDrainAssetControlOption") == OptionHandler._DistrictControlOption || OptionHandler.getDropdownSetting("StormDrainAssetControlOption") == OptionHandler._IDOverrideOption && overrideDistrictControl == false)
             {
                 organization = "District";
                 area = "in district";
-            } else if (ModSettings.StormDrainAssetControlOption == ModSettings._IDControlOption || ModSettings.StormDrainAssetControlOption == ModSettings._IDOverrideOption && overrideDistrictControl == true)
+            }
+            else if (OptionHandler.getDropdownSetting("StormDrainAssetControlOption") == OptionHandler._IDControlOption || OptionHandler.getDropdownSetting("StormDrainAssetControlOption") == OptionHandler._IDOverrideOption && overrideDistrictControl == true)
             {
                 organization = "Group";
                 area = "in group";
-            } else
+            }
+            else
             {
                 organization = "Total";
                 area = "on map";
             }
             string elevationControl;
-            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+            if (OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption)
             {
                 elevationControl = "Invert";
             }
@@ -1289,7 +1493,7 @@ namespace Rainfall
                 int maxy;
                 Singleton<TerrainManager>.instance.CalculateAreaHeight(data.m_position.x, data.m_position.z, data.m_position.x, data.m_position.z, out miny, out avgy, out maxy);
                 int lines = 0;
-                float inletHeight = (float)miny/64f;
+                float inletHeight = (float)miny / 64f;
                 int InletHydraulicRate = (int)Hydraulics.getHydraulicRate(buildingID);
                 int DistrictHydraulicRate = (int)Hydraulics.getDistrictHydraulicRate(buildingID, Hydraulics.getInletList());
                 float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position));
@@ -1305,24 +1509,27 @@ namespace Rainfall
                 }
                 else if ((data.m_problems & Notification.Problem.NoPlaceforGoods) != Notification.Problem.None)
                 {
-                    
-               
+
+
                     if (currentOutletAI != null)
                     {
                         if (currentOutletAI.m_stormWaterOutlet > 0)
                         {
                             float currentOutletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
                             float outletHeight = currentOutlet.m_position.y;
-                            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                            if (OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption)
                                 outletHeight += currentOutletAI.m_invert;
                             sb.AppendLine("Cannot gravity drain to outlet!");
                             //sb.AppendLine("Outlet | " + elevationControl + "/Water " + outletHeight.ToString(floatFormat) + "/" + currentOutletWSE.ToString(floatFormat));
-                        } else if (currentOutletAI.m_stormWaterDetention > 0) {
+                        }
+                        else if (currentOutletAI.m_stormWaterDetention > 0)
+                        {
                             float basinWSE = Hydraulics.getDetentionBasinWSE(lowestOutletID);
                             float basinInvert = currentOutlet.m_position.y - currentOutletAI.m_invert;
                             sb.AppendLine("Cannot gravity drain to basin!");
                             //sb.AppendLine("Basin | Invert/Water " + basinInvert.ToString(floatFormat)+"/"+basinWSE.ToString(floatFormat));
-                        } else
+                        }
+                        else
                         {
                             sb.AppendLine("Cannot gravity drain to anything!");
                         }
@@ -1337,7 +1544,7 @@ namespace Rainfall
                 }
                 else
                 {
-                    sb.AppendLine("SWA | Inlet/" + organization+ ": " + InletStormwaterAccululation + "/" + DistrictStormwaterAccumulation);
+                    sb.AppendLine("SWA | Inlet/" + organization + ": " + InletStormwaterAccululation + "/" + DistrictStormwaterAccumulation);
                     lines += 2;
                 }
 
@@ -1351,7 +1558,7 @@ namespace Rainfall
                         {
                             float currentOutletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
                             float outletHeight = currentOutlet.m_position.y;
-                            if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                            if (OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption)
                                 outletHeight += currentOutletAI.m_invert;
                             sb.AppendLine("Outlet | " + elevationControl + "/Water " + outletHeight.ToString(floatFormat) + "/" + currentOutletWSE.ToString(floatFormat));
                         }
@@ -1363,11 +1570,13 @@ namespace Rainfall
                         }
                     }
                 }
-                sb.AppendLine("Inlet | Rate/Cap: " + InletHydraulicRate + "/" + this.m_stormWaterIntake);
-                sb.AppendLine(organization + " | Rate/Cap: " + DistrictHydraulicRate  + "/" + DistrictInletCapacity);
+                sb.AppendLine("Inlet | Rate/Cap: " + InletHydraulicRate + "/" + Mathf.RoundToInt(OptionHandler.getSliderSetting("InletRateMultiplier")*(float)this.m_stormWaterIntake));
+                sb.AppendLine(organization + " | Rate/Cap: " + DistrictHydraulicRate + "/" + DistrictInletCapacity);
                 WaterSource sourceData = waterSimulation.m_waterSources.m_buffer[data.m_waterSource];
                 //sb.AppendLine("WS | Rate/Water: " + sourceData.m_inputRate.ToString()+"/"+ sourceData.m_water.ToString());
                 //sb.AppendLine("WS | ID: " + data.m_waterSource.ToString());
+                //sb.AppendLine("DEBUG | X: " + data.m_position.x.ToString() + " Z:" + data.m_position.z.ToString());
+
 
             }
             else if (this.m_stormWaterOutlet > 0)
@@ -1376,14 +1585,14 @@ namespace Rainfall
                 int DistrictOutletCapacity = (int)Hydraulics.getAreaOutletCapacity(buildingID);
                 int OutletStormwaterAccumulation = (int)Hydraulics.getStormWaterAccumulationForOutlet(buildingID);
                 float outletHeight = data.m_position.y;
-                if (ModSettings.GravityDrainageOption == ModSettings._ImprovedGravityDrainageOption)
+                if (OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption)
                     outletHeight += this.m_invert;
                 float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position + this.m_waterLocationOffset));
                 int outletHydraulicRate = (int)Hydraulics.getHydraulicRate(buildingID);
                 int outletVariableCapacity = (int)Hydraulics.getVariableCapacity(buildingID);
                 int districtVariableCapacity = (int)Hydraulics.getAreaVariableCapacity(buildingID, Hydraulics.getOutletList());
                 int DistrictHydraulicRate = (int)Hydraulics.getDistrictHydraulicRate(buildingID, Hydraulics.getOutletList());
-                
+
                 if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
                 {
                     sb.AppendLine("No inlets " + area + "!");
@@ -1402,7 +1611,7 @@ namespace Rainfall
                 }
 
                 sb.AppendLine("Available SWA " + area + ": " + OutletStormwaterAccumulation);
-                
+
                 sb.AppendLine("ELEV | " + elevationControl + "/Water " + outletHeight.ToString(floatFormat) + "/" + waterSurfaceElevation.ToString(floatFormat));
                 //sb.Append("x=" + (data.m_position + this.m_waterLocationOffset).x + " y=" + (data.m_position + this.m_waterLocationOffset).y + " z=" + (data.m_position + this.m_waterLocationOffset).z);
                 sb.AppendLine("Outlet | Rate/Cap: " + outletHydraulicRate + "/" + outletVariableCapacity);
@@ -1424,14 +1633,14 @@ namespace Rainfall
                     sb.AppendLine("No inlets " + area + "!");
                 }
                 else {
-                    sb.AppendLine("Rate | Influx/Infiltration: " + detentionRate.ToString() +"/"+ InfiltrationRate.ToString());
+                    sb.AppendLine("Rate | Influx/Infiltration: " + detentionRate.ToString() + "/" + InfiltrationRate.ToString());
                 }
-                sb.AppendLine("ELEV | Invert/Soffit: " + basinInvert.ToString(floatFormat) + "/" +basinSoffit.ToString(floatFormat));
+                sb.AppendLine("ELEV | Invert/Soffit: " + basinInvert.ToString(floatFormat) + "/" + basinSoffit.ToString(floatFormat));
                 sb.AppendLine("ELEV | Water Surface:" + basinWSE.ToString(floatFormat));
                 sb.AppendLine("Storage | " + DetainedStormwater + "/" + this.m_stormWaterDetention);
-                sb.AppendLine(organization + " Storage | " + DistrictDetainedStormwater + "/"+DistrictDetentionCapcity);
+                sb.AppendLine(organization + " Storage | " + DistrictDetainedStormwater + "/" + DistrictDetentionCapcity);
             }
-           
+
             return sb.ToString();
         }
 
@@ -1444,7 +1653,8 @@ namespace Rainfall
             return base.RequireRoadAccess() || this.m_workPlaceCount0 != 0 || this.m_workPlaceCount1 != 0 || this.m_workPlaceCount2 != 0 || this.m_workPlaceCount3 != 0;
         }
 
-        public override ToolBase.ToolErrors CheckBulldozing(ushort buildingID, ref Building data) {
+        public override ToolBase.ToolErrors CheckBulldozing(ushort buildingID, ref Building data)
+        {
             if (this.m_stormWaterDetention > 0)
             {
                 if (Hydraulics.getDetainedStormwater(buildingID) > 0)
@@ -1468,10 +1678,11 @@ namespace Rainfall
             MilestoneInfo unlockMilestoneInfo = null;
             try
             {
-                if (!Singleton<UnlockManager>.instance.m_allMilestones.TryGetValue("Milestone"+this.m_milestone.ToString(), out unlockMilestoneInfo))
+                if (!Singleton<UnlockManager>.instance.m_allMilestones.TryGetValue("Milestone" + this.m_milestone.ToString(), out unlockMilestoneInfo))
                 {
                     unlockMilestoneInfo = null;
-                } else
+                }
+                else
                 {
                     //Debug.Log("Successcully read milestone");
                     this.m_info.m_UnlockMilestone = unlockMilestoneInfo;
@@ -1484,7 +1695,369 @@ namespace Rainfall
             }
             return base.CheckUnlocking();
         }
-        
+
+        public override bool GetWaterStructureCollisionRange(out float min, out float max)
+        {
+            /*
+            if (this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0)
+            {
+                min = 0f;
+                max = 0f;
+                return true;
+            }*/
+
+            float num = Mathf.Max(0f, (float)m_info.m_cellLength * 4f + m_waterLocationOffset.z - 37f);
+            min = 0f;
+            max = num / Mathf.Max(num + 2f, (float)m_info.m_cellLength * 8f);
+            return true;
+        }
+        public override bool IgnoreBuildingCollision()
+        {
+            if (this.m_stormWaterIntake > 0 && this.m_electricityConsumption == 0)
+            {
+                return true;
+            }
+            if (this.m_stormWaterDetention > 0)
+            {
+                return true;
+            }
+            return base.IgnoreBuildingCollision();
+        }
+        private static bool SplitSegment(ushort segment, out ushort node, Vector3 position)
+        {
+            NetSegment netSegment = Singleton<NetManager>.instance.m_segments.m_buffer[segment];
+            NetInfo info = netSegment.Info;
+            uint buildIndex = netSegment.m_buildIndex;
+            NetNode netNode = Singleton<NetManager>.instance.m_nodes.m_buffer[netSegment.m_startNode];
+            NetNode netNode2 = Singleton<NetManager>.instance.m_nodes.m_buffer[netSegment.m_endNode];
+            Vector3 perpendicularPosition = new Vector3();
+            Vector3 perpendicularDirection = new Vector3();
+            netSegment.GetClosestPositionAndDirection(position, out perpendicularPosition, out perpendicularDirection);
+            string text = null;
+            if ((netSegment.m_flags & NetSegment.Flags.CustomName) != 0)
+            {
+                InstanceID empty = InstanceID.Empty;
+                empty.NetSegment = segment;
+                text = Singleton<InstanceManager>.instance.GetName(empty);
+            }
+            bool flag = false;
+            if (((long)Singleton<NetManager>.instance.m_adjustedSegments[segment >> 6] & (1L << (int)segment)) != 0)
+            {
+                flag = true;
+            }
+            Singleton<NetManager>.instance.ReleaseSegment(segment, keepNodes: true);
+            bool flag2 = false;
+            if ((netNode.m_flags & (NetNode.Flags.Moveable | NetNode.Flags.Untouchable)) == NetNode.Flags.Moveable)
+            {
+                if ((netNode.m_flags & NetNode.Flags.Middle) != 0)
+                {
+                    MoveMiddleNode(ref netSegment.m_startNode, ref netSegment.m_startDirection, position);
+                }
+                else if ((netNode.m_flags & NetNode.Flags.End) != 0)
+                {
+                    MoveEndNode(ref netSegment.m_startNode, ref netSegment.m_startDirection, position);
+                }
+            }
+            if ((netNode2.m_flags & (NetNode.Flags.Moveable | NetNode.Flags.Untouchable)) == NetNode.Flags.Moveable)
+            {
+                if ((netNode2.m_flags & NetNode.Flags.Middle) != 0)
+                {
+                    MoveMiddleNode(ref netSegment.m_endNode, ref netSegment.m_endDirection, position);
+                }
+                else if ((netNode2.m_flags & NetNode.Flags.End) != 0)
+                {
+                    MoveEndNode(ref netSegment.m_endNode, ref netSegment.m_endDirection, position);
+                }
+            }
+            ushort segment2 = 0;
+            ushort segment3 = 0;
+            if (Singleton<NetManager>.instance.CreateNode(out node, ref Singleton<SimulationManager>.instance.m_randomizer, info, position, buildIndex))
+            {
+                Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= (netNode.m_flags & netNode2.m_flags & (NetNode.Flags.Original | NetNode.Flags.Water | NetNode.Flags.Sewage | NetNode.Flags.Heating | NetNode.Flags.Electricity));
+                if (info.m_netAI.IsUnderground())
+                {
+                    Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = (byte)((netNode.m_elevation + netNode2.m_elevation) / 2);
+                    Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= NetNode.Flags.Underground;
+                }
+                else if (info.m_netAI.IsOverground())
+                {
+                    float num = Singleton<TerrainManager>.instance.SampleRawHeightSmooth(position);
+                    Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = (byte)Mathf.Clamp(Mathf.RoundToInt(position.y - num), 1, 255);
+                }
+                else
+                {
+                    Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = 0;
+                    Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= NetNode.Flags.OnGround;
+                }
+                if (netSegment.m_startNode != 0)
+                {
+                    if (Singleton<NetManager>.instance.CreateSegment(out segment2, ref Singleton<SimulationManager>.instance.m_randomizer, info, Singleton<NetManager>.instance.m_segments.m_buffer[segment2].TreeInfo, netSegment.m_startNode, node, netSegment.m_startDirection, -perpendicularDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None))
+                    {
+                        Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment2].m_flags |= (netSegment.m_flags & (NetSegment.Flags.Original | NetSegment.Flags.Collapsed | NetSegment.Flags.WaitingPath | NetSegment.Flags.TrafficStart | NetSegment.Flags.CrossingStart | NetSegment.Flags.HeavyBan | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded | NetSegment.Flags.BikeBan | NetSegment.Flags.CarBan | NetSegment.Flags.YieldStart));
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment2].m_wetness = netSegment.m_wetness;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment2].m_condition = netSegment.m_condition;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment2].m_nameSeed = netSegment.m_nameSeed;
+                        if (text != null)
+                        {
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment2].m_flags |= NetSegment.Flags.CustomName;
+                            InstanceID empty2 = InstanceID.Empty;
+                            empty2.NetSegment = segment2;
+                            Singleton<InstanceManager>.instance.SetName(empty2, text);
+                        }
+                        if (flag)
+                        {
+                            Singleton<NetManager>.instance.m_adjustedSegments[segment2 >> 6] |= (ulong)(1L << (int)segment2);
+                        }
+                    }
+                    else
+                    {
+                        flag2 = true;
+                    }
+                }
+                if (netSegment.m_endNode != 0)
+                {
+                    if (info.m_requireContinuous)
+                    {
+                        if (Singleton<NetManager>.instance.CreateSegment(out segment3, ref Singleton<SimulationManager>.instance.m_randomizer, info, Singleton<NetManager>.instance.m_segments.m_buffer[segment3].TreeInfo, node, netSegment.m_endNode, perpendicularDirection, netSegment.m_endDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None))
+                        {
+                            Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_flags |= (netSegment.m_flags & (NetSegment.Flags.Original | NetSegment.Flags.Collapsed | NetSegment.Flags.WaitingPath | NetSegment.Flags.TrafficEnd | NetSegment.Flags.CrossingEnd | NetSegment.Flags.HeavyBan | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded | NetSegment.Flags.BikeBan | NetSegment.Flags.CarBan | NetSegment.Flags.YieldEnd));
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_wetness = netSegment.m_wetness;
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_condition = netSegment.m_condition;
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_nameSeed = netSegment.m_nameSeed;
+                            if (text != null)
+                            {
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_flags |= NetSegment.Flags.CustomName;
+                                InstanceID empty3 = InstanceID.Empty;
+                                empty3.NetSegment = segment3;
+                                Singleton<InstanceManager>.instance.SetName(empty3, text);
+                            }
+                            if (flag)
+                            {
+                                Singleton<NetManager>.instance.m_adjustedSegments[segment3 >> 6] |= (ulong)(1L << (int)segment3);
+                            }
+                        }
+                        else
+                        {
+                            flag2 = true;
+                        }
+                    }
+                    else if (Singleton<NetManager>.instance.CreateSegment(out segment3, ref Singleton<SimulationManager>.instance.m_randomizer, info, Singleton<NetManager>.instance.m_segments.m_buffer[segment3].TreeInfo,  netSegment.m_endNode, node, netSegment.m_endDirection, perpendicularDirection, buildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, (netSegment.m_flags & NetSegment.Flags.Invert) == NetSegment.Flags.None))
+                    {
+                        Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+                        NetSegment.Flags flags = netSegment.m_flags & (NetSegment.Flags.Original | NetSegment.Flags.Collapsed | NetSegment.Flags.WaitingPath | NetSegment.Flags.HeavyBan | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded | NetSegment.Flags.BikeBan | NetSegment.Flags.CarBan);
+                        if ((netSegment.m_flags & NetSegment.Flags.CrossingEnd) != 0)
+                        {
+                            flags |= NetSegment.Flags.CrossingStart;
+                        }
+                        if ((netSegment.m_flags & NetSegment.Flags.TrafficEnd) != 0)
+                        {
+                            flags |= NetSegment.Flags.TrafficStart;
+                        }
+                        if ((netSegment.m_flags & NetSegment.Flags.YieldEnd) != 0)
+                        {
+                            flags |= NetSegment.Flags.YieldStart;
+                        }
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_flags |= flags;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_wetness = netSegment.m_wetness;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_condition = netSegment.m_condition;
+                        Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_nameSeed = netSegment.m_nameSeed;
+                        if (text != null)
+                        {
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment3].m_flags |= NetSegment.Flags.CustomName;
+                            InstanceID empty4 = InstanceID.Empty;
+                            empty4.NetSegment = segment3;
+                            Singleton<InstanceManager>.instance.SetName(empty4, text);
+                        }
+                        if (flag)
+                        {
+                            Singleton<NetManager>.instance.m_adjustedSegments[segment3 >> 6] |= (ulong)(1L << (int)segment3);
+                        }
+                    }
+                    else
+                    {
+                        flag2 = true;
+                    }
+                }
+                info.m_netAI.AfterSplitOrMove(node, ref Singleton<NetManager>.instance.m_nodes.m_buffer[node], netSegment.m_startNode, netSegment.m_endNode);
+            }
+            else
+            {
+                flag2 = true;
+            }
+            if (flag2 && node != 0)
+            {
+                Singleton<NetManager>.instance.ReleaseNode(node);
+                node = 0;
+            }
+            return !flag2;
+        }
+
+        private static void MoveMiddleNode(ref ushort node, ref Vector3 direction, Vector3 position)
+        {
+            NetNode netNode = Singleton<NetManager>.instance.m_nodes.m_buffer[node];
+            uint buildIndex = netNode.m_buildIndex;
+            ushort num = node;
+            NetInfo info = netNode.Info;
+            Vector3 vector = netNode.m_position - position;
+            vector.y = 0f;
+            if (vector.sqrMagnitude < 2500f)
+            {
+                int num2 = 0;
+                ushort segment;
+                while (true)
+                {
+                    if (num2 >= 8)
+                    {
+                        return;
+                    }
+                    segment = netNode.GetSegment(num2);
+                    if (segment != 0)
+                    {
+                        break;
+                    }
+                    num2++;
+                }
+                NetSegment netSegment = Singleton<NetManager>.instance.m_segments.m_buffer[segment];
+                NetInfo info2 = netSegment.Info;
+                Vector3 position2 = Singleton<NetManager>.instance.m_nodes.m_buffer[netSegment.m_startNode].m_position;
+                Vector3 position3 = Singleton<NetManager>.instance.m_nodes.m_buffer[netSegment.m_endNode].m_position;
+                bool flag = !NetSegment.IsStraight(position2, netSegment.m_startDirection, position3, netSegment.m_endDirection);
+                bool flag2 = netSegment.m_startNode == node;
+                ushort num3 = (!flag2) ? netSegment.m_startNode : netSegment.m_endNode;
+                uint buildIndex2 = netSegment.m_buildIndex;
+                NetNode netNode2 = Singleton<NetManager>.instance.m_nodes.m_buffer[num3];
+                vector = netNode2.m_position - position;
+                vector.y = 0f;
+                bool flag3 = vector.sqrMagnitude >= 10000f;
+                Vector3 pos;
+                Vector3 dir;
+                if (flag && flag3)
+                {
+                    netSegment.GetClosestPositionAndDirection((position + netNode2.m_position) * 0.5f, out pos, out dir);
+                    if (flag2)
+                    {
+                        dir = -dir;
+                    }
+                }
+                else
+                {
+                    
+                    pos = LerpPosition(position, netNode2.m_position, 0.5f, info.m_netAI.GetLengthSnap());
+                    dir = ((!flag2) ? netSegment.m_startDirection : netSegment.m_endDirection);
+                }
+                direction = dir;
+                string text = null;
+                if ((netSegment.m_flags & NetSegment.Flags.CustomName) != 0)
+                {
+                    InstanceID empty = InstanceID.Empty;
+                    empty.NetSegment = segment;
+                    text = Singleton<InstanceManager>.instance.GetName(empty);
+                }
+                bool flag4 = false;
+                if (((long)Singleton<NetManager>.instance.m_adjustedSegments[segment >> 6] & (1L << (int)segment)) != 0)
+                {
+                    flag4 = true;
+                }
+                Singleton<NetManager>.instance.ReleaseSegment(segment, keepNodes: true);
+                Singleton<NetManager>.instance.ReleaseNode(node);
+                if (flag3)
+                {
+                    if (Singleton<NetManager>.instance.CreateNode(out node, ref Singleton<SimulationManager>.instance.m_randomizer, info, pos, buildIndex))
+                    {
+                        Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= (netNode.m_flags & (NetNode.Flags.Original | NetNode.Flags.Water | NetNode.Flags.Sewage | NetNode.Flags.Heating | NetNode.Flags.Electricity));
+                        if (info.m_netAI.IsUnderground())
+                        {
+                            Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = netNode.m_elevation;
+                            Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= NetNode.Flags.Underground;
+                        }
+                        else if (netNode.m_elevation > 0)
+                        {
+                            float num4 = Singleton<TerrainManager>.instance.SampleRawHeightSmooth(pos);
+                            Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = (byte)Mathf.Clamp(Mathf.RoundToInt(pos.y - num4), 1, 255);
+                        }
+                        else
+                        {
+                            Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_elevation = 0;
+                            Singleton<NetManager>.instance.m_nodes.m_buffer[node].m_flags |= NetNode.Flags.OnGround;
+                        }
+                        if (flag2)
+                        {
+                            if (Singleton<NetManager>.instance.CreateSegment(out segment, ref Singleton<SimulationManager>.instance.m_randomizer, info2, Singleton<NetManager>.instance.m_segments.m_buffer[segment].TreeInfo, node, num3, -dir, netSegment.m_endDirection, buildIndex2, Singleton<SimulationManager>.instance.m_currentBuildIndex, (netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None))
+                            {
+                                Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_flags |= (netSegment.m_flags & (NetSegment.Flags.Original | NetSegment.Flags.Collapsed | NetSegment.Flags.WaitingPath | NetSegment.Flags.TrafficEnd | NetSegment.Flags.CrossingEnd | NetSegment.Flags.HeavyBan | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded | NetSegment.Flags.BikeBan | NetSegment.Flags.CarBan | NetSegment.Flags.YieldEnd));
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_wetness = netSegment.m_wetness;
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_condition = netSegment.m_condition;
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_nameSeed = netSegment.m_nameSeed;
+                                if (text != null)
+                                {
+                                    Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_flags |= NetSegment.Flags.CustomName;
+                                    InstanceID empty2 = InstanceID.Empty;
+                                    empty2.NetSegment = segment;
+                                    Singleton<InstanceManager>.instance.SetName(empty2, text);
+                                }
+                                if (flag4)
+                                {
+                                    Singleton<NetManager>.instance.m_adjustedSegments[segment >> 6] |= (ulong)(1L << (int)segment);
+                                }
+                            }
+                        }
+                        else if (Singleton<NetManager>.instance.CreateSegment(out segment, ref Singleton<SimulationManager>.instance.m_randomizer, info2, Singleton<NetManager>.instance.m_segments.m_buffer[segment].TreeInfo, num3, node, netSegment.m_startDirection, -dir, buildIndex2, Singleton<SimulationManager>.instance.m_currentBuildIndex, (netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None))
+                        {
+                            Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_flags |= (netSegment.m_flags & (NetSegment.Flags.Original | NetSegment.Flags.Collapsed | NetSegment.Flags.WaitingPath | NetSegment.Flags.TrafficStart | NetSegment.Flags.CrossingStart | NetSegment.Flags.HeavyBan | NetSegment.Flags.Blocked | NetSegment.Flags.Flooded | NetSegment.Flags.BikeBan | NetSegment.Flags.CarBan | NetSegment.Flags.YieldStart));
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_wetness = netSegment.m_wetness;
+                            Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_condition = netSegment.m_condition;
+                            if (text != null)
+                            {
+                                Singleton<NetManager>.instance.m_segments.m_buffer[segment].m_flags |= NetSegment.Flags.CustomName;
+                                InstanceID empty3 = InstanceID.Empty;
+                                empty3.NetSegment = segment;
+                                Singleton<InstanceManager>.instance.SetName(empty3, text);
+                            }
+                            if (flag4)
+                            {
+                                Singleton<NetManager>.instance.m_adjustedSegments[segment >> 6] |= (ulong)(1L << (int)segment);
+                            }
+                        }
+                        info2.m_netAI.AfterSplitOrMove(node, ref Singleton<NetManager>.instance.m_nodes.m_buffer[node], num, num);
+                    }
+                }
+                else
+                {
+                    node = num3;
+                }
+            }
+        }
+
+        private static void MoveEndNode(ref ushort node, ref Vector3 direction, Vector3 position)
+        {
+            NetNode netNode = Singleton<NetManager>.instance.m_nodes.m_buffer[node];
+            NetInfo info = netNode.Info;
+            Vector3 vector = netNode.m_position - position;
+            vector.y = 0f;
+            float minNodeDistance = info.GetMinNodeDistance();
+            if (vector.sqrMagnitude < minNodeDistance * minNodeDistance)
+            {
+                Singleton<NetManager>.instance.ReleaseNode(node);
+                node = 0;
+            }
+        }
+        private static Vector3 LerpPosition(Vector3 refPos1, Vector3 refPos2, float t, float snap)
+        {
+            if (snap != 0f)
+            {
+                float magnitude = new Vector2(refPos2.x - refPos1.x, refPos2.z - refPos1.z).magnitude;
+                if (magnitude != 0f)
+                {
+                    t = Mathf.Round(t * magnitude / snap + 0.01f) * (snap / magnitude);
+                }
+            }
+            return Vector3.Lerp(refPos1, refPos2, t);
+        }
+
 
     }
 }
