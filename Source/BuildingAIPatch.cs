@@ -13,10 +13,10 @@ namespace Rainfall
             int gridX = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
             int gridZ = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
             int gridLocation = gridZ * 270 + gridX;
-
-            bool flag = DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            bool flag = DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            DrainageAreaGrid.EnableBuildingUncoveredDrainageAreas(buildingID);
             //Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding flag = " + flag.ToString());
-            bool logging = false;
+            bool logging = false;  
             if (logging)
             {
                 Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());

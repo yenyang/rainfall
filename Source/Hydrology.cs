@@ -69,6 +69,9 @@ namespace Rainfall
         private List<string> beforeReturnRateStatements;
         private List<string> closingStatements;
 
+        private readonly string versionNumber = "V2.04";
+        private readonly string buildTimestamp = "2022.3.16 7:52 pm";
+
         private int initialTileCount = 0;
 
         public int[] gameAreas;
@@ -230,7 +233,7 @@ namespace Rainfall
                     _weatherManager.m_currentRain = 0;
                     _weatherManager.m_targetRain = 0;
                 }
-                Debug.Log("[RF].Hydrology  Starting Storm Drain Mod!");
+                Debug.Log("[RF].Hydrology  Starting Storm Drain Mod! Version: " + versionNumber + " Build Timestamp: " + buildTimestamp);
                 initialized = true;
             }
             else if (!initialized)
@@ -247,23 +250,23 @@ namespace Rainfall
                     eightyOneTilesDelay = 0f;
                 }
                 return;
-            } else if (!DrainageBasinGrid.areYouAwake())
+            } else if (!DrainageAreaGrid.areYouAwake())
             {
                 purgePreviousWaterSources();
-                DrainageBasinGrid.Awake();
+                DrainageAreaGrid.Awake();
                 initialTileCount = _gameAreaManager.m_areaGrid.Length;
                 return;
                          
-            } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageBasinGrid.areYouAwake())
+            } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageAreaGrid.areYouAwake())
             {
-                DrainageBasinGrid.Clear();
+                DrainageAreaGrid.Clear();
                 return;
             } else if (eightyOneTileCheckPeriod > 0f)
             {
                 eightyOneTileCheckPeriod -= realTimeDelta;
-            } else if (_gameAreaManager.m_areaGrid.Length == 81 && DrainageBasinGrid.areYouAwake())
+            } else if (_gameAreaManager.m_areaGrid.Length == 81 && DrainageAreaGrid.areYouAwake())
             {
-                DrainageBasinGrid.updateDrainageBasinGridForNewTile(logging);
+                DrainageAreaGrid.updateDrainageAreaGridForNewTile(logging);
                 eightyOneTileCheckPeriod = 15f;
             }
 
@@ -968,7 +971,7 @@ namespace Rainfall
         public static void Terminate()
         {
             Hydrology.instance.terminated = true;
-            DrainageBasinGrid.Clear();
+            DrainageAreaGrid.Clear();
         }
         
     }

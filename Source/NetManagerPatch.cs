@@ -14,7 +14,7 @@ namespace Rainfall
     {
         static void Postfix(ushort segment, ref NetSegment data, ref NetManager __instance)
         {
-            if (!DrainageBasin.reviewSegment(segment) || !DrainageBasinGrid.areYouAwake())
+            if (!DrainageArea.reviewSegment(segment) || !DrainageAreaGrid.areYouAwake())
             {
                 return;
             }
@@ -22,11 +22,12 @@ namespace Rainfall
             int gridX = Mathf.Clamp((int)(centerPos.x / 64f + 135f), 0, 269);
             int gridZ = Mathf.Clamp((int)(centerPos.z / 64f + 135f), 0, 269);
             int gridLocation = gridZ * 270 + gridX;
-            DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
             bool logging = false;
             if (logging) {
                 Debug.Log("[RF]NetManagerPatch.FinalizeSegment recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
             }
+            DrainageAreaGrid.EnableRoadwayUncoveredDrainageAreas(segment);
         }
     }
     
@@ -35,7 +36,7 @@ namespace Rainfall
     {
         static void Postfix(ushort segment, ref NetSegment data, ref NetManager __instance)
         {
-            if (!DrainageBasin.reviewSegment(segment) || !DrainageBasinGrid.areYouAwake())
+            if (!DrainageArea.reviewSegment(segment) || !DrainageAreaGrid.areYouAwake())
             {
                 return;
             }   
@@ -43,12 +44,13 @@ namespace Rainfall
             int gridX = Mathf.Clamp((int)(centerPos.x / 64f + 135f), 0, 269);
             int gridZ = Mathf.Clamp((int)(centerPos.z / 64f + 135f), 0, 269);
             int gridLocation = gridZ * 270 + gridX;
-            DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
             bool logging = false;
             if (logging)
             {
                 Debug.Log("[RF]NetManagerPatch.InitializeSegment recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
             }
+            DrainageAreaGrid.DisableRoadwayCoveredDrainageAreas(segment);
         }
     }
     

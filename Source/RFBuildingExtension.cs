@@ -40,7 +40,7 @@ namespace Rainfall
 
         public void OnBuildingReleased(ushort id)
         {
-            if (!DrainageBasin.reviewBuilding(id))
+            if (!DrainageArea.reviewBuilding(id))
             {
                 return;
             }
@@ -49,12 +49,14 @@ namespace Rainfall
             int gridZ = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
             int gridLocation = gridZ * 270 + gridX;
 
-            DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+            DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+           
             bool logging = false;
             if (logging)
             {
                 Debug.Log("[RF]RFBuildingExtension.OnBuildingReleased recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
-            }
+            } 
+            DrainageAreaGrid.EnableBuildingUncoveredDrainageAreas(id);
         }
 
     }

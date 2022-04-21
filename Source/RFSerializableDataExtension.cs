@@ -24,9 +24,9 @@ namespace Rainfall
         }
         public void OnSaveData()
         {
-            if (DrainageBasinGrid.areYouAwake() && LoadingFunctions.loaded == true)
+            if (DrainageAreaGrid.areYouAwake() && LoadingFunctions.loaded == true)
             {
-                DrainageBasinGrid.Clear();
+                DrainageAreaGrid.Clear();
             }
         }
 
