@@ -1250,7 +1250,7 @@ namespace Rainfall
                             data.m_waterPollution = 0;
                         }
                         sourceData.m_water -= num;
-
+                        sourceData.m_outputRate = 0u;
                         Vector3 vector = sourceData.m_inputPosition;
                         if (!instance.HasWater(VectorUtils.XZ(vector)))
                         {
@@ -1319,6 +1319,7 @@ namespace Rainfall
                     }
                     else
                     {
+                        sourceData2.m_outputRate = 0u;
                         sourceData2.m_inputRate = num + 3u >> 2;
                         waterSimulation.CreateWaterSource(out data.m_waterSource, sourceData2);
                         num = 0u;
