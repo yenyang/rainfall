@@ -5,7 +5,6 @@ using ColossalFramework.Math;
 using UnityEngine;
 using ColossalFramework.Globalization;
 using HarmonyLib;
-using System;
 
 namespace Rainfall
 {

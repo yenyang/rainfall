@@ -806,7 +806,7 @@ namespace Rainfall
                     bool flag5 = finalProductionRate > 0;
                     if (flag1 && flag2 && flag3 && flag4 && flag5 && flag6)
                     {
-                        capturedWater = this.HandleWaterSource(buildingID, ref buildingData, false, stormWaterIntake, systemCapacity, this.m_waterEffectDistance);
+                        capturedWater = this.HandleWaterSource(buildingID, ref buildingData, false, stormWaterIntake, systemCapacity, 8f/*this.m_waterEffectDistance*/);
                         if (this.m_electricityConsumption == 0)
                         {
                             Vector3 pos = buildingData.CalculatePosition(this.m_waterLocationOffset);
@@ -948,7 +948,7 @@ namespace Rainfall
                         {
                             int num12;
 
-                            num12 = this.HandleWaterSource(buildingID, ref buildingData, true, stormWaterOutlet, num10, this.m_waterEffectDistance);
+                            num12 = this.HandleWaterSource(buildingID, ref buildingData, true, stormWaterOutlet, num10, 8f/*this.m_waterEffectDistance*/);
                             //Debug.Log("[RF].StormDrainAI  Num12 = " + num12.ToString());
                             if (num12 > 0)
                             {
@@ -1211,6 +1211,7 @@ namespace Rainfall
             {
                 bool flag = false;
                 WaterSource sourceData = waterSimulation.LockWaterSource(data.m_waterSource);
+                
                 try
                 {
                     if (output)
@@ -1223,6 +1224,14 @@ namespace Rainfall
                         sourceData.m_outputRate = num2 + 3u >> 2;
                         sourceData.m_water += num;
                         sourceData.m_pollution += num * (uint)this.m_outletPollution / (uint)Mathf.Max(100, waterSimulation.GetPollutionDisposeRate() * 100);
+                        Vector2 waterSourceOutputPositionXZ = new Vector2(sourceData.m_outputPosition.x, sourceData.m_outputPosition.z);
+                        Vector3 waterLocationOffsetPosition = data.CalculatePosition(this.m_waterLocationOffset);
+                        Vector2 stormDrainPositionXZ = new Vector2(waterLocationOffsetPosition.x, waterLocationOffsetPosition.z);
+                        if (Vector2.Distance(stormDrainPositionXZ, waterSourceOutputPositionXZ) > 50f)
+                        {
+                            sourceData.m_outputPosition = waterLocationOffsetPosition;
+                        }
+
                         //Debug.Log("[RF].StormDrainAI  watersource + output ");
                     }
                     else
@@ -1237,6 +1246,9 @@ namespace Rainfall
                         if (num > sourceData.m_water)
                         {
                             num = sourceData.m_water;
+                            if (!Hydraulics.instance._SDoutletsToReleaseWaterSources.Contains(buildingID)) {
+                                Hydraulics.instance._SDoutletsToReleaseWaterSources.Add(buildingID);
+                            }
                         }
                         //Debug.Log("[RF] num is " + num.ToString() + " souce water is " + sourceData.m_water.ToString());
 
@@ -1250,7 +1262,7 @@ namespace Rainfall
                             data.m_waterPollution = 0;
                         }
                         sourceData.m_water -= num;
-
+                        sourceData.m_outputRate = 0u;
                         Vector3 vector = sourceData.m_inputPosition;
                         if (!instance.HasWater(VectorUtils.XZ(vector)))
                         {
@@ -1319,6 +1331,7 @@ namespace Rainfall
                     }
                     else
                     {
+                        sourceData2.m_outputRate = 0u;
                         sourceData2.m_inputRate = num + 3u >> 2;
                         waterSimulation.CreateWaterSource(out data.m_waterSource, sourceData2);
                         num = 0u;

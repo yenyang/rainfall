@@ -42,14 +42,15 @@ namespace Rainfall
             {
                 "RO", new List<OptionsItemBase>
                 {
-                    new OptionsSlider()   {defaultValue = 50f,  uniqueName = "GlobalRunoffScalar",              readableName = "Global Runoff Scalar",                                                 units = " X",       tooltipFormat = "F2",              max = 200f, step = 5f, tooltipMultiplier = 0.02f},
-                    new OptionsDropdown() {defaultValue = 1,    uniqueName = "PreviousStormOption",             readableName = "Previous Storm Options (IE Loading after you saved during a storm)",    options = new List<string>() { "Start New Storm", "Continue from First Half", "Continue from Second Half", "End Previous Storm" } },
-                    new OptionsSlider()   {defaultValue = 180f,   uniqueName = "MinimumStormDuration",            readableName = "Min. Storm Duration",                                               units = " min",     tooltipFormat = "F0",     min = 60f,   max = 1440f,  step = 60f, tooltipMultiplier=1f/60f},
-                    new OptionsSlider()   {defaultValue = 480f,  uniqueName = "MaximumStormDuration",            readableName = "Max. Storm Duration",                                               units = " min",     tooltipFormat = "F0",     min = 60f,   max = 1440f,  step = 60f, tooltipMultiplier=1f/60f},
-                    new OptionsSlider()   {defaultValue = 2f,   uniqueName = "MinimumBasinRunoff",              readableName = "Min. Basin Runoff",                                                 units = " units",   tooltipFormat = "F0",                 max = 100f, step = 1f},
-                    new OptionsSlider()   {defaultValue = 500f, uniqueName = "MaximumBasinRunoff",              readableName = "Max. Basin Runoff",                                                 units = " units",   tooltipFormat = "F0",                 max = 500f, step = 10f},
-                    new OptionsDropdown() {defaultValue = 1,    uniqueName = "SelectedGridOption",              readableName = "Simulation Tiles",                          options = new List<string>(){ "None", "Owned Tiles", "Adjacent Tiles", "Adjacent and Diagonal Tiles","25 Tiles", "49 Tiles", "49 Tiles + Edges" }},
-                    new OptionsButton()   {                     uniqueName = "ApplyGridOption",                 readableName = "Apply Simulation Tiles Choice",                                                             onButtonClicked = DrainageBasinGrid.Clear},
+                    new OptionsSlider()   {defaultValue = 25f,  uniqueName = "GlobalRunoffScalar",              readableName = "Global Runoff Scalar",                                                 units = " X",       tooltipFormat = "F2",              max = 200f, step = 2.5f, tooltipMultiplier = 0.04f},
+                    //new OptionsDropdown() {defaultValue = 1,    uniqueName = "PreviousStormOption",             readableName = "Previous Storm Options (IE Loading after you saved during a storm)",    options = new List<string>() { "Start New Storm", "Continue from First Half", "Continue from Second Half", "End Previous Storm" } },
+                    //new OptionsSlider()   {defaultValue = 180f,   uniqueName = "MinimumStormDuration",          readableName = "Min. Storm Duration",                                               units = " min",     tooltipFormat = "F0",     min = 60f,   max = 1440f,  step = 60f, tooltipMultiplier=1f/60f},
+                    //new OptionsSlider()   {defaultValue = 480f,  uniqueName = "MaximumStormDuration",           readableName = "Max. Storm Duration",                                               units = " min",     tooltipFormat = "F0",     min = 60f,   max = 1440f,  step = 60f, tooltipMultiplier=1f/60f},
+                    new OptionsSlider()   {defaultValue = 0.0001f, uniqueName = "IntensityRateOfChange",        readableName = "Intensity Rate of Change",                                              units = " units", tooltipFormat = "F5", min = 0.00001f, max = 0.0004f, step = 0.00001f},
+                    new OptionsSlider()   {defaultValue = 2f,   uniqueName = "MinimumDrainageAreaRunoff",       readableName = "Min. Drainage Area RO",                                                 units = " units",   tooltipFormat = "F0",                 max = 100f, step = 1f},
+                    new OptionsSlider()   {defaultValue = 500f, uniqueName = "MaximumDrainageAreaRunoff",       readableName = "Max. Drainage Area RO",                                                 units = " units",   tooltipFormat = "F0",                 max = 500f, step = 10f},
+                    new OptionsDropdown() {defaultValue = 1,    uniqueName = "SelectedGridOption",              readableName = "Simulation Tiles",                          options = new List<string>(){ "None", "Owned Tiles", "Adjacent Tiles", "Adjacent and Diagonal Tiles","25 Tiles", "49 Tiles", "81 Tiles" }},
+                    new OptionsButton()   {                     uniqueName = "ApplyGridOption",                 readableName = "Apply Simulation Tiles Choice",                                                             onButtonClicked = DrainageAreaGrid.Clear},
                     new OptionsSlider()   {defaultValue = 0.2f, uniqueName = "UndevelopedRunoffCoefficient",    readableName = "Vacant Runoff Coeff.",                 tooltipFormat = "F2",     max = 1f,    step = 0.05f},
                     new OptionsSlider()   {defaultValue = 0.5f, uniqueName = "DefaultRunoffCoefficient",        readableName = "Default Runoff Coeff.",                 tooltipFormat = "F2",     max = 1f,    step = 0.05f},
 
@@ -166,9 +167,11 @@ namespace Rainfall
             {
                 "RMV", new List<OptionsItemBase>
                 {
-                    new OptionsButton() {uniqueName = "EndStorm",           readableName = "End Storm",         onButtonClicked = Hydrology.EndStorm},
-                    new OptionsButton() {uniqueName = "DeleteAllAssets",    readableName = "Delete All Assets", onButtonClicked = Hydraulics.deleteAllAssets},
-                    new OptionsButton() {uniqueName = "Terminate",          readableName = "Terminate",         onButtonClicked = Hydrology.Terminate},
+                    new OptionsButton() {uniqueName = "EndStorm",                        readableName = "End Storm",                    onButtonClicked = Hydrology.EndStorm},
+                    new OptionsButton() {uniqueName = "DeleteAllAssets",                 readableName = "Delete All Assets",            onButtonClicked = Hydraulics.deleteAllAssets},
+                    new OptionsButton() {uniqueName = "PurgeWaterSources",               readableName = "Purge RF Water Sources",       onButtonClicked = Hydrology.purgePreviousWaterSources},
+                    new OptionsButton() {uniqueName = "PurgeFacilityWaterSources",       readableName = "Purge Facility Water Sources", onButtonClicked = Hydrology.PurgeFacilityWaterSources},
+                    new OptionsButton() {uniqueName = "Terminate",                       readableName = "Terminate",                    onButtonClicked = Hydrology.Terminate},
                 }
             }
         };
@@ -363,6 +366,8 @@ namespace Rainfall
             typeof(IndustryBuildingAI),
             typeof(MainIndustryBuildingAI)
         };
+
+       
 
         public const int _NoControlOption = 0;
         public const int _DistrictControlOption = 1;

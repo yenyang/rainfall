@@ -42,9 +42,10 @@ namespace Rainfall
         private HashSet<ushort> _SDinlets;
         private HashSet<ushort> _SDoutlets;
         private HashSet<ushort> _SDdetentionBasins;
-        
+        public HashSet<ushort> _SDoutletsToReleaseWaterSources;
         
         public  HashSet<ushort> _previousFacilityWaterSources;
+        public HashSet<ushort> _existingSewageOutlets;
         private HashSet<ushort> _naturalDrainageAssets;
         //private HashSet<ushort> _snowpackAssets;
         public HashSet<ushort> _snowpackAssets10;
@@ -101,12 +102,13 @@ namespace Rainfall
             _districts = new byte[_capacity];
             _hydraulicRate = new int[_capacity];
             _variableCapacity = new int[_capacity];
-            
+            _existingSewageOutlets = new HashSet<ushort>();
             _drainageGroups = new string[_capacity];
             
             _SDinlets = new HashSet<ushort>();
             _SDoutlets = new HashSet<ushort>();
             _SDdetentionBasins = new HashSet<ushort>();
+            _SDoutletsToReleaseWaterSources = new HashSet<ushort>();
             //_snowpackAssets = new HashSet<ushort>();
             _naturalDrainageAssets = new HashSet<ushort>();
             netsegments = new HashSet<ushort>();
@@ -208,7 +210,25 @@ namespace Rainfall
 
                                     addOutlet(id);
                                     if (currentBuilding.m_waterSource != 0)
-                                        _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                    {
+                                        if (currentBuilding.m_waterSource > 0 && currentBuilding.m_waterSource < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size)
+                                        {
+                                            if (Vector3.Distance(currentBuilding.m_position, Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources[currentBuilding.m_waterSource - 1].m_outputPosition) < 100f)
+                                            {
+                                                if (!_previousFacilityWaterSources.Contains(currentBuilding.m_waterSource))
+                                                {
+                                                    _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                                    Debug.Log("[RF]Hydraulics _previousFacilityWaterSources Added Stormwater Outlet " + id.ToString() + " watersourceID = " + currentBuilding.m_waterSource);
+                                                }
+
+                                            }
+                                        }
+                                        else
+                                        {
+                                            currentBuilding.m_waterSource = 0;
+                                        }
+
+                                    }
                                     //Debug.Log("[RF].Hydraulics Added Outlet " + id.ToString() + " to district " + _districts[id]);
                                 }
                                 else if (currentStormDrainAi.m_stormWaterIntake != 0)
@@ -216,7 +236,26 @@ namespace Rainfall
 
                                     addInlet(id);
                                     if (currentBuilding.m_waterSource != 0)
-                                        _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                    {
+                                        if (currentBuilding.m_waterSource > 0 && currentBuilding.m_waterSource < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size)
+                                        {
+                                            if (Vector3.Distance(currentBuilding.m_position, Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources[currentBuilding.m_waterSource - 1].m_inputPosition) < 100f)
+                                            {
+                                                if (!_previousFacilityWaterSources.Contains(currentBuilding.m_waterSource))
+                                                {
+                                                    _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                                    Debug.Log("[RF]Hydraulics _previousFacilityWaterSources Added Stormwater inlet " + id.ToString() + " watersourceID = " + currentBuilding.m_waterSource);
+                                                }
+
+                                            }
+                                        }
+                                        else
+                                        {
+                                            currentBuilding.m_waterSource = 0;
+                                        }
+
+
+                                    }
                                     //Debug.Log("[RF].Hydraulics Added Inlet " + id.ToString() + " to district " + _districts[id]);
 
                                 }
@@ -230,7 +269,32 @@ namespace Rainfall
                             else if (currentWaterFacilityAI != null)
                             {
                                 if (currentBuilding.m_waterSource != 0)
-                                    _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                {
+                                    if (currentBuilding.m_waterSource > 0 && currentBuilding.m_waterSource < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size)
+                                    {
+                                        if (Vector3.Distance(currentBuilding.m_position, Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources[currentBuilding.m_waterSource - 1].m_outputPosition) < 100f)
+                                        {
+                                            if (!_previousFacilityWaterSources.Contains(currentBuilding.m_waterSource))
+                                            {
+                                                _previousFacilityWaterSources.Add(currentBuilding.m_waterSource);
+                                                Debug.Log("[RF]Hydraulics _previousFacilityWaterSources Added water facility inlet " + id.ToString() + " watersourceID = " + currentBuilding.m_waterSource);
+                                            }
+
+                                        }
+                                        
+                                        if (currentWaterFacilityAI.m_sewageOutlet > 0f)
+                                        {
+                                            if (Hydraulics.instance._existingSewageOutlets != null)
+                                            {
+                                                Hydraulics.instance._existingSewageOutlets.Add(id);
+                                                Debug.Log("[RF]BuildingManagerAddToGrid Adding existing sewage outlet " + id.ToString());
+                                            }
+                                        }
+                                    } else
+                                    {
+                                        currentBuilding.m_waterSource = 0;
+                                    }
+                                }
                             }
                             else if (currentNaturalDrinageAI != null)
                             {
@@ -256,7 +320,7 @@ namespace Rainfall
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("[RF].Hydraulics.Inialize Encountered Exception " + e);
+                        Debug.Log("[RF].Hydraulics.Inialize Encountered Exception " + e + " at id " + id.ToString());
                     }
 
                 }
@@ -340,7 +404,7 @@ namespace Rainfall
                 {
                     _simulationTimeCount = 0f;
                 }
-             
+
 
 
                 if (serviceBuildingInfo.isVisible)
@@ -376,9 +440,10 @@ namespace Rainfall
                                                 if (!_terrainManager.GetClosestWaterPos(ref vector, currentBuildingAI.m_waterEffectDistance))
                                                 {
                                                     _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
+                                                    currentBuilding.m_waterSource = 0;
                                                 }
                                             }
-                                            currentBuilding.m_waterSource = 0;
+                                            
 
                                         }
                                         _buildingManager.RelocateBuilding(buildingID, newPosition, angle);
@@ -451,9 +516,9 @@ namespace Rainfall
                                                 if (!_terrainManager.GetClosestWaterPos(ref vector, currentBuildingAI.m_waterEffectDistance))
                                                 {
                                                     _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
+                                                    currentBuilding.m_waterSource = 0;
                                                 }
                                             }
-                                            currentBuilding.m_waterSource = 0;
 
                                         }
                                         _buildingManager.RelocateBuilding(buildingID, newPosition, angle);

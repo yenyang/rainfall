@@ -40,20 +40,26 @@ namespace Rainfall
 
         public void OnBuildingReleased(ushort id)
         {
-            if (!DrainageBasin.reviewBuilding(id))
+            if (!DrainageArea.ReviewBuilding(id))
             {
                 return;
             }
-            Building data = Singleton<BuildingManager>.instance.m_buildings.m_buffer[id];
-            int gridX = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
-            int gridZ = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
-            int gridLocation = gridZ * 270 + gridX;
-
-            DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
-            bool logging = false;
-            if (logging)
+            else
             {
-                Debug.Log("[RF]RFBuildingExtension.OnBuildingReleased recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
+                Building data = Singleton<BuildingManager>.instance.m_buildings.m_buffer[id];
+                int gridX = Mathf.Clamp((int)(data.m_position.x / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                int gridZ = Mathf.Clamp((int)(data.m_position.z / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                int gridLocation = gridZ * DrainageAreaGrid.drainageAreaGridCoefficient + gridX;
+
+                DrainageAreaGrid.RemoveBuildingFromDrainageArea(id, gridLocation);
+                DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+
+                bool logging = false;
+                if (logging)
+                {
+                    Debug.Log("[RF]RFBuildingExtension.OnBuildingReleased recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
+                }
+                DrainageAreaGrid.EnableBuildingUncoveredDrainageAreas(id);
             }
         }
 

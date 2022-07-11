@@ -9,19 +9,30 @@ namespace Rainfall
        
         static void Postfix(ushort buildingID, ref Building data, bool __state)
         {
-           
-            int gridX = Mathf.Clamp((int)(data.m_position.x / 64f + 135f), 0, 269);
-            int gridZ = Mathf.Clamp((int)(data.m_position.z / 64f + 135f), 0, 269);
-            int gridLocation = gridZ * 270 + gridX;
-
-            bool flag = DrainageBasinGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
-            //Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding flag = " + flag.ToString());
-            bool logging = false;
-            if (logging)
+            if (!DrainageArea.ReviewBuilding(buildingID))
             {
-                Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
+                return;
+            }
+            else
+            {
+
+
+                int gridX = Mathf.Clamp((int)(data.m_position.x / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                int gridZ = Mathf.Clamp((int)(data.m_position.z / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                int gridLocation = gridZ * DrainageAreaGrid.drainageAreaGridCoefficient + gridX;
+                DrainageAreaGrid.RemoveBuildingFromDrainageArea(buildingID, gridLocation);
+                bool flag = DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+                DrainageAreaGrid.EnableBuildingUncoveredDrainageAreas(buildingID);
+                //Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding flag = " + flag.ToString());
+                bool logging = false;
+                if (logging)
+                {
+                    Debug.Log("[RF]BuildingAIReleaseBuildingPatch.ReleaseBuilding recalculated compostie runoff coefficent for basin at grid location " + gridLocation.ToString());
+                }
+
             }
             return;
         }
     }
+
 }

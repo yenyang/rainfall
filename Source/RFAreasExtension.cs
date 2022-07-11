@@ -40,7 +40,7 @@ namespace Rainfall
             {
                 Debug.Log("[RF]RFAreasExtension.OnUnlockArea New Area #" + index.ToString() + " to Add to AreaGrid!");
             }
-            DrainageBasinGrid.updateDrainageBasinGridForNewTile(logging);
+            DrainageAreaGrid.updateDrainageAreaGridForNewTile(logging);
         }
     }
 }

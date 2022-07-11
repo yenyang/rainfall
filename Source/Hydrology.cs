@@ -20,7 +20,7 @@ namespace Rainfall
         private TerrainManager _terrainManager;
         public bool isRaining;
         System.Random random = new System.Random();
-        private StormDistributionIO customStormDistribution;
+       
 
         private int _capacity;
         public bool terminated;
@@ -28,29 +28,23 @@ namespace Rainfall
         public bool initialized;
         public static Hydrology instance = null;
         public bool loaded;
-        private float stormDuration = 30;
-        private decimal stormTime = 0;
-        private bool previousStorm = false;
-        private string intensityCurveName;
-        private SortedList<float, float> stormIntensityCurve;
-        private decimal stormIntensityCurveKeyIndex;
-        private float intensityTargetLock;
-        private float beforeTickCurrentIntensity;
+        //private float stormDuration = 30;
+        //private decimal stormTime = 0;
+        //private bool previousStorm = false;
         private const decimal secondsToMinutes = (decimal)(1f / 60f);
-        private const float rainStep = 0.0002f;
+        //private const float rainStep = 0.0002f;
         private const int ChirpRainTweetChance = 1;
         private string forecasterName;
         private string forecasterChannel;
         public int[] _preRainfallLandvalues;
         private string rainUnlockMilestone = "Milestone3";
-        private uint waterSourceMaxQuantity = 1000u;
         private float eightyOneTilesDelay = 5f;
         private float eightyOneTileCheckPeriod = 30f;
-        private uint naturalDrainageSourceMaxQuantity = 8000000u;
         public bool cleanUpCycle = false;
         public bool endStorm = false;
         public bool intensityCurveFinished = false;
         public bool holdLandValue = true;
+        public List<ushort> _waterSourceIDs;
 
         private float _realTimeCountSinceLastStorm;
 
@@ -68,6 +62,11 @@ namespace Rainfall
         private SortedList<float, string> intensityAdjectives;
         private List<string> beforeReturnRateStatements;
         private List<string> closingStatements;
+
+        public List<ushort> buildingToReviewAndAdd;
+
+        private readonly string versionNumber = "V2.04";
+        private readonly string buildTimestamp = "2022.07.10 6:25pm";
 
         private int initialTileCount = 0;
 
@@ -91,10 +90,10 @@ namespace Rainfall
             isRaining = false;
             loaded = false;
             _realTimeCount = 0;
-
+            _waterSourceIDs = new List<ushort>();
             initializeQuotes();
             initializeRainFallForecastStrings();
-            customStormDistribution = new StormDistributionIO();
+            buildingToReviewAndAdd = new List<ushort>();
 
             base.OnCreated(threading);
         }
@@ -125,49 +124,32 @@ namespace Rainfall
 
             if (!loaded) return;
 
-            if (isRaining && stormTime < (decimal)stormDuration && intensityTargetLock > 0 && stormIntensityCurveKeyIndex > 0 && intensityCurveFinished && stormIntensityCurve.Count > 0)
-            {
-                //Debug.Log("[RF]Hydrology.BeforeTick Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-
-                int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
-                int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
-                float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-
-                float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
-                float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
-                float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
-                beforeTickCurrentIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
-                //Debug.Log("[RF]Hydrology BeforeTick SICKI = " + stormIntensityCurveKeyIndex.ToString() + " stormTime = " + stormTime.ToString() + " bTCI = " + beforeTickCurrentIntensity.ToString());
-                if (beforeTickCurrentIntensity < rainStep)
-                {
-                    beforeTickCurrentIntensity = rainStep;
-                }
-                _weatherManager.m_currentRain = beforeTickCurrentIntensity;
-
-            }
-            else if (stormTime > (decimal)stormDuration)
+            /*if (stormTime > (decimal)stormDuration)
             {
                 _weatherManager.m_currentRain = 0;
                 _weatherManager.m_targetRain = 0;
-                stormIntensityCurveKeyIndex = 0;
-                intensityCurveFinished = false;
+               
                 stormTime = 0;
                 stormDuration = 0;
                 isRaining = false;
                 Debug.Log("[RF]Hydrology BeforeTick Storm Ended StormTime > StormDuration");
-            }
+            }*/
 
             if (endStorm == true)
             {
                 _weatherManager.m_currentRain = 0;
                 _weatherManager.m_targetRain = 0;
-                stormIntensityCurveKeyIndex = 0;
-                intensityCurveFinished = false;
-                stormTime = 0;
-                stormDuration = 0;
+                //stormTime = 0;
+                //stormDuration = 0;
                 isRaining = false;
                 endStorm = false;
+            }
+            if (_weatherManager.m_currentRain < _weatherManager.m_targetRain)
+            {
+                _weatherManager.m_currentRain = Mathf.Min(_weatherManager.m_targetRain, _weatherManager.m_currentRain - 0.0002f + OptionHandler.getSliderSetting("IntensityRateOfChange"));
+            } else if (_weatherManager.m_currentRain > _weatherManager.m_targetRain)
+            {
+                _weatherManager.m_currentRain = Mathf.Max(_weatherManager.m_targetRain, _weatherManager.m_currentRain + 0.0002f - OptionHandler.getSliderSetting("IntensityRateOfChange"));
             }
             
             base.OnBeforeSimulationTick();
@@ -216,7 +198,7 @@ namespace Rainfall
 
 
 
-
+                /*
                 if (_weatherManager.m_targetRain > 0 && OptionHandler.getDropdownSetting("PreviousStormOption") != 0 && OptionHandler.getDropdownSetting("PreviousStormOption") != 3)
                 {
 
@@ -229,8 +211,8 @@ namespace Rainfall
                 {
                     _weatherManager.m_currentRain = 0;
                     _weatherManager.m_targetRain = 0;
-                }
-                Debug.Log("[RF].Hydrology  Starting Storm Drain Mod!");
+                }*/
+                Debug.Log("[RF].Hydrology  Starting Storm Drain Mod! Version: " + versionNumber + " Build Timestamp: " + buildTimestamp);
                 initialized = true;
             }
             else if (!initialized)
@@ -247,30 +229,51 @@ namespace Rainfall
                     eightyOneTilesDelay = 0f;
                 }
                 return;
-            } else if (!DrainageBasinGrid.areYouAwake())
+            } else if (!DrainageAreaGrid.areYouAwake())
             {
                 purgePreviousWaterSources();
-                DrainageBasinGrid.Awake();
+                DrainageAreaGrid.Awake();
                 initialTileCount = _gameAreaManager.m_areaGrid.Length;
                 return;
                          
-            } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageBasinGrid.areYouAwake())
+            } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageAreaGrid.areYouAwake())
             {
-                DrainageBasinGrid.Clear();
+                DrainageAreaGrid.Clear();
                 return;
             } else if (eightyOneTileCheckPeriod > 0f)
             {
                 eightyOneTileCheckPeriod -= realTimeDelta;
-            } else if (_gameAreaManager.m_areaGrid.Length == 81 && DrainageBasinGrid.areYouAwake())
+            } else if (_gameAreaManager.m_areaGrid.Length == 81 && DrainageAreaGrid.areYouAwake())
             {
-                DrainageBasinGrid.updateDrainageBasinGridForNewTile(logging);
+                DrainageAreaGrid.updateDrainageAreaGridForNewTile(logging);
                 eightyOneTileCheckPeriod = 15f;
             }
 
-            if (isRaining && stormTime < (decimal)stormDuration && Math.Abs(_weatherManager.m_currentRain - beforeTickCurrentIntensity) <= 0.5)
+            if (buildingToReviewAndAdd.Count > 0)
             {
-                _weatherManager.m_currentRain = beforeTickCurrentIntensity;
+                foreach(ushort buildingID in buildingToReviewAndAdd)
+                {
+                    Building currentBuilding = _buildingManager.m_buildings.m_buffer[buildingID];
+                    BuildingAI currentBuildingAI = currentBuilding.Info.m_buildingAI;
+                    if (DrainageArea.ReviewBuilding(buildingID))
+                    {
+                        int gridX = Mathf.Clamp((int)(currentBuilding.m_position.x / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                        int gridZ = Mathf.Clamp((int)(currentBuilding.m_position.z / DrainageAreaGrid.drainageAreaGridQuotient + DrainageAreaGrid.drainageAreaGridAddition), 0, DrainageAreaGrid.drainageAreaGridCoefficient - 1);
+                        int gridLocation = gridZ * DrainageAreaGrid.drainageAreaGridCoefficient + gridX;
+
+                        DrainageAreaGrid.AddBuildingToDrainageArea(buildingID, gridLocation);
+                        DrainageAreaGrid.recalculateCompositeRunoffCoefficentForBasinAtGridLocation(gridLocation);
+                        //Debug.Log("[RF].Hydrology Reviewed and Added Building ID " + buildingID);
+                        DrainageAreaGrid.DisableBuildingCoveredDrainageAreas(buildingID);
+                    } else
+                    {
+                        //Debug.Log("[RF].Hydrology Reviewed and didn't add Building ID " + buildingID);
+                    }
+
+                }
+                buildingToReviewAndAdd.Clear();
             }
+           
             if (_weatherManager.m_currentRain == 0 && isRaining == false)
             {
 
@@ -314,140 +317,32 @@ namespace Rainfall
 
                     //Debug.Log("[RF]Hydrology.onUpdate1 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
 
-
+                    /*
                     if (_weatherManager.m_targetRain > 0)
                     {
-                        bool flag = true;
-                        intensityCurveFinished = false;
+                       
+                       
                         stormDuration = random.Next((int)OptionHandler.getSliderSetting("MinimumStormDuration"), (int)OptionHandler.getSliderSetting("MaximumStormDuration"));
                         stormDuration -= stormDuration % 3f;
                         Debug.Log("[RF]Hydrology.OnUpdate1 stormDuration = " + stormDuration.ToString());
-                        stormIntensityCurveKeyIndex = 0;
-                        //Debug.Log("[RF]Hydrology.OnUpdate1 cityName = " + cityName.ToString());
-                        
-                        //Debug.Log("[RF]Hydrology.OnUpdate1 intensity curve name = " + intensityCurveName.ToString());
-                        intensityTargetLock = _weatherManager.m_targetRain;
-                        //Debug.Log("[RF]Hydrology.OnUpdate1 intensityTargetLock = " + intensityTargetLock.ToString());
-                        int MaxStormDuration = 1440;
-                        intensityCurveName = "Type IA - Pacific Northwest";
-                        SortedList<float, float> initialStormDepthCurve = new SortedList<float, float>();
-                        bool flag1 = StormDistributionIO.GetDepthCurve(intensityCurveName, ref initialStormDepthCurve);
-                        
-                        if (!flag1)
+                        if (!previousStorm)
                         {
-                            flag = false;
-                            if (!flag1)
-                                Debug.Log("[RF]Hydrology.OnUpdate Could not find Intensity Curve " + intensityCurveName);
-                           
+                            stormTime = (decimal)(realTimeDelta);
+
                         }
-                        Debug.Log("[RF]Hydrology.OnUpdate1 flag1 = " + flag1.ToString());
-                        if (flag)
+                        else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 1)
                         {
-                            StormDistributionIO.logCurve(initialStormDepthCurve, "Initial Storm Depth Curve");
-                            bool flag3;
-                            SortedList<float, float> reducedDepthCurve;
-                            if (stormDuration < MaxStormDuration)
-                            {
-                                reducedDepthCurve = new SortedList<float, float>();
-                                flag3 = StormDistributionIO.reduceDuration(stormDuration, initialStormDepthCurve, ref reducedDepthCurve);
-                            }
-                            else
-                            {
-                                reducedDepthCurve = initialStormDepthCurve;
-                                flag3 = true;
-                            }
-                            if (flag3)
-                            {
+                            stormTime = (decimal)(realTimeDelta);
 
-                                SortedList<float, float> initialStormIntensityCurve = StormDistributionIO.GetIntensityCurve(reducedDepthCurve);
-                                float initialMaxIntensity = StormDistributionIO.GetMaxValue(initialStormIntensityCurve);
-                                StormDistributionIO.logCurve(initialStormIntensityCurve, "Initial Storm Intensity Curve");
-                                stormIntensityCurve = StormDistributionIO.ScaleDepthCurve(initialStormIntensityCurve, _weatherManager.m_targetRain / initialMaxIntensity);
-                                StormDistributionIO.logCurve(stormIntensityCurve, "Storm Intensity Curve");
-                                if (StormDistributionIO.GetMaxValue(stormIntensityCurve) <= 0)
-                                {
-                                    flag = false;
-                                }
-                                Debug.Log("[RF]Hydrology.OnUpdate1 Starting storm with Max intensity " + StormDistributionIO.GetMaxValue(stormIntensityCurve).ToString());
-                                beforeTickCurrentIntensity = rainStep;
-                                //Debug.Log("[RF]Hydrology.OnUpdate1 beforeTickCurrentIntensity = " + beforeTickCurrentIntensity.ToString());
-
-                                if (!previousStorm)
-                                {
-                                    stormTime = (decimal)(realTimeDelta);
-                                    stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
-                                    //Debug.Log("[RF]Hydrology.OnUpdate1 stormIntensityCurveKeyIndex = " + stormIntensityCurveKeyIndex.ToString());
-                                }
-                                else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 1)
-                                {
-                                    stormTime = (decimal)(realTimeDelta);
-                                    float temporaryIntensity = 0;
-                                    stormIntensityCurveKeyIndex = stormTime / (decimal)stormIntensityCurve.Keys[1];
-                                    decimal stormIntensityCurveKeyIndexDelta = stormIntensityCurveKeyIndex;
-                                    while (temporaryIntensity < _weatherManager.m_currentRain && stormTime < (decimal)stormDuration)
-                                    {
-                                        int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
-                                        int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
-                                        float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                                        float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-
-                                        float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
-                                        float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
-                                        float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
-                                        temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
-                                        stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);
-                                        stormIntensityCurveKeyIndex += stormIntensityCurveKeyIndexDelta;
-                                    }
-                                }
-                                else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 2)
-                                {
-                                    stormTime = (decimal)(stormDuration);
-                                    float temporaryIntensity = 0f;
-                                    decimal stormIntensityCurveKeyIndexDelta = (decimal)(simulationTimeDelta) / (decimal)stormIntensityCurve.Keys[1];
-                                    stormIntensityCurveKeyIndex = (decimal)(stormIntensityCurve.Keys.Count - 1) - stormIntensityCurveKeyIndexDelta;
-                                    while (temporaryIntensity < _weatherManager.m_currentRain && stormTime > 0)
-                                    {
-                                        int stormIntensityCurveKeyIndexFloor = Mathf.FloorToInt((float)stormIntensityCurveKeyIndex);
-                                        int stormIntensityCurveKeyIndexCeil = Mathf.CeilToInt((float)stormIntensityCurveKeyIndex);
-                                        float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                                        float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-                                        float interpolationPercentage = (float)stormIntensityCurveKeyIndex - stormIntensityCurveKeyIndexFloor;
-                                        float rangeMinimum = stormIntensityCurve[timeRangeMinimum];
-                                        float rangeMaximum = stormIntensityCurve[timeRangeMaximum];
-                                        temporaryIntensity = Mathf.Lerp(rangeMinimum, rangeMaximum, interpolationPercentage);
-                                        stormTime = (decimal)Mathf.Lerp(timeRangeMinimum, timeRangeMaximum, interpolationPercentage);
-                                        stormIntensityCurveKeyIndex -= stormIntensityCurveKeyIndexDelta;
-                                    }
-                                    if (stormTime < 0)
-                                        flag = false;
-                                }
-                            }
-                            else
-                            {
-                                flag = false;
-                                Debug.Log("[RF]Hydrology.OnUpdate1 could not reduce depth curve duration");
-                            }
-
-                            //Debug.Log("[RF]Hydrology.OnUpdate1 simulationTimeDelta = " + simulationTimeDelta.ToString());
-                            // Debug.Log("[RF]Hydrology.OnUpdate1 timeScale = " + ModSettings.TimeScale.ToString());
-                            //Debug.Log("[RF]Hydrology.OnUpdate1 (simulationTimeDelta * ModSettings.TimeScale) = " + (simulationTimeDelta * ModSettings.TimeScale).ToString());
+                        }
+                        else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 2)
+                        {
+                            stormTime = (decimal)(stormDuration);
 
                         }
                         
-                        else
-                        {
-                            Debug.Log("[RF]Hydrology.OnUpdate1 finished before it started");
-                        }
-                        if (flag)
-                        {
-                            
-                            intensityCurveFinished = true;
-                        } else
-                        {
-                            intensityCurveFinished = false;
-                        }
 
-                    }
+                    }*/
                     if (OptionHandler.getCheckboxSetting("ChirpForecasts") == true)
                     {
                         ChirpForecast.SendMessage(forecasterName, generateRainFallForecast());
@@ -455,7 +350,7 @@ namespace Rainfall
                 }
                 // Debug.Log("[RF].Hydrology  Started to Rain with int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
             }
-            else if (_weatherManager.m_currentRain > 0 && isRaining == true && simulationTimeDelta > 0 && realTimeDelta > 0 && stormTime < (decimal)stormDuration)
+            else if (_weatherManager.m_currentRain > 0 && isRaining == true && simulationTimeDelta > 0 && realTimeDelta > 0 /*&& stormTime < (decimal)stormDuration*/)
             {
                 if (OptionHandler.getCheckboxSetting("ChirpRainTweets") == true && random.Next(0, 10000) < ChirpRainTweetChance)
                 {
@@ -482,69 +377,20 @@ namespace Rainfall
 
 
                 //Debug.Log("[RF]Hydrology.onUpdate2 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-                stormTime += (decimal)realTimeDelta;
-                if (stormTime < (decimal)stormDuration)
-                {
-                    int stormIntensityCurveKeyIndexFloor = (int)Math.Floor(stormIntensityCurveKeyIndex);
-                    int stormIntensityCurveKeyIndexCeil = (int)Math.Ceiling(stormIntensityCurveKeyIndex);
-                    float timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                    float timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-                    float timeRange = timeRangeMaximum - timeRangeMinimum;
-                    int attempts = 0;
-
-                    while (stormTime >= (decimal)timeRangeMaximum || stormTime <= (decimal)timeRangeMinimum)
-                    {
-                        if (stormTime > (decimal)timeRangeMaximum)
-                        {
-                            stormIntensityCurveKeyIndexFloor++;
-                            stormIntensityCurveKeyIndexCeil++;
-                        }
-                        else if (stormTime < (decimal)timeRangeMinimum)
-                        {
-                            stormIntensityCurveKeyIndexFloor--;
-                            stormIntensityCurveKeyIndexCeil--;
-                        }
-                        timeRangeMinimum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexFloor];
-                        timeRangeMaximum = stormIntensityCurve.Keys[stormIntensityCurveKeyIndexCeil];
-                        attempts++;
-                        if (attempts > stormIntensityCurve.Keys.Count)
-                            break;
-                    }
-                    if (attempts > stormIntensityCurve.Keys.Count)
-                    {
-                        Debug.Log("[RF]Hydrology.OnUpdate2 stormTime = " + stormTime.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate2 stormIntensityCurveKeyIndexFloor = " + stormIntensityCurveKeyIndexFloor.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate2 stormIntensityCurveKeyIndexCeil = " + stormIntensityCurveKeyIndexCeil.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate2 timeRangeMinimum = " + timeRangeMinimum.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate2 timeRangeMaximum = " + timeRangeMaximum.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate2 attempts = " + attempts.ToString());
-                        Debug.Log("[RF]Hydrology.OnUpdate Could not find time range for stormTime = " + stormTime.ToString());
-                    }
-                    else
-                    {
-                        timeRange = timeRangeMaximum - timeRangeMinimum;
-                        decimal timePercentage = (stormTime - (decimal)timeRangeMinimum) / (decimal)timeRange;
-                        stormIntensityCurveKeyIndex = (decimal)stormIntensityCurveKeyIndexFloor + timePercentage;
-                        //Debug.Log("[RF]Hydrology Update stormTime = " + stormTime.ToString() + " of " + stormDuration.ToString() + " rainfall = " + _weatherManager.m_currentRain.ToString() + " max = " + StormDistributionIO.GetMaxValue(stormIntensityCurve) + " total depth = " + StormDistributionIO.GetMaxDepth(stormIntensityCurve));
-                    }
-                }
-
-
-
-
+                //stormTime += (decimal)realTimeDelta;
             }
             //Debug.Log("[RF].Hydrology  Raining with int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
 
             else if (_weatherManager.m_currentRain == 0 && isRaining == true)
             {
-                try
+                /*try
                 {
                     purgePreviousWaterSources();
                 }
                 catch (Exception e)
                 {
                     Debug.Log("[RF]Hydrology.OnUpdate Could not remove water sources from buildings encountered exception " + e.ToString());
-                }
+                }*/
                 isRaining = false;
                 cleanUpCycle = false;
                 
@@ -572,36 +418,21 @@ namespace Rainfall
         
         public override void OnAfterSimulationTick()
         {
+            /*
             if (isRaining)
             {
                 //Debug.Log("[RF]Hydrology.onAfterSimulationTick Current Rainfall = " + _weatherManager.m_currentRain.ToString());
 
-                if (_weatherManager.m_targetRain != intensityTargetLock && intensityTargetLock > 0)
-                {
-                    _weatherManager.m_targetRain = intensityTargetLock;
-                    _weatherManager.m_currentRain = beforeTickCurrentIntensity;
-
-                }
-                if (stormTime < (decimal)stormDuration && Mathf.Abs(_weatherManager.m_currentRain - beforeTickCurrentIntensity) <= 0.5)
-                {
-                    _weatherManager.m_currentRain = beforeTickCurrentIntensity;
-                }
-                else if (stormTime >= (decimal)stormDuration && (Mathf.Abs(_weatherManager.m_currentRain - beforeTickCurrentIntensity) <= 0.01))
+               /
+                if (stormTime >= (decimal)stormDuration)
                 {
                     Debug.Log("[RF]Hydrology.OnAfterTick Storm completed naturally.");
-                    _weatherManager.m_currentRain = 0;
-                }
-                else
-                {
-                    Debug.Log("[RF]Hydrology.OnAfterTick stormTime < StormDuration " + (stormTime < (decimal)stormDuration).ToString());
-                    Debug.Log("[RF]Hydrology.OnAfterTick CurrentRain-BTCI = " + (Mathf.Abs(_weatherManager.m_currentRain - beforeTickCurrentIntensity)).ToString() + " CR-CTCI<0.01 = " + (Mathf.Abs(_weatherManager.m_currentRain - beforeTickCurrentIntensity) <= 0.01).ToString());
-
-                    Debug.Log("[RF]Hydrology.OnAfterTick Ended improved simulation stormTime = " + stormTime.ToString() + " stormDuration = " + stormDuration.ToString() + " currentRain = " + _weatherManager.m_currentRain + " bTCI = " + beforeTickCurrentIntensity);
+                    _weatherManager.m_targetRain = 0;
                 }
                     
 
                 
-            }
+            }*/
             base.OnAfterSimulationTick();
         }
 
@@ -770,11 +601,11 @@ namespace Rainfall
             StringBuilder fullForecast = new StringBuilder();
             fullForecast.Append(randomString(introductionStatements));
             fullForecast.Append(forecasterName + " from Channel " + forecasterChannel + ". ");
-            fullForecast.Append(randomString(beforeTimeStatements));
-            fullForecast.Append(convertSecToMinSec(stormDuration - Mathf.Round((float)stormTime)) + " ");
+            //fullForecast.Append(randomString(beforeTimeStatements));
+            //fullForecast.Append(convertSecToMinSec(stormDuration - Mathf.Round((float)stormTime)) + " ");
            
             fullForecast.Append(randomString(beforeIntensityAdjectiveStatements));
-            float maxIntensity = StormDistributionIO.GetMaxValue(stormIntensityCurve);
+            float maxIntensity = _weatherManager.m_targetRain;
             foreach (KeyValuePair<float, string> pair in intensityAdjectives)
             {
                 if (maxIntensity <= pair.Key)
@@ -920,25 +751,81 @@ namespace Rainfall
             //Debug.Log("[RF]Hydrology.onUpdate building " + id.ToString() + " is at elevation " + _buildingManager.m_buildings.m_buffer[id].m_position.y.ToString());
         }
 
-        private void purgePreviousWaterSources()
+        public static void purgePreviousWaterSources()
         {
             List<ushort> previousStormWaterSourceIDs = new List<ushort>();
 
-            for (int i = 0; i < _waterSimulation.m_waterSources.m_size - 1; i++)
+            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size - 1; i++)
             {
-                WaterSource ws = _waterSimulation.m_waterSources.m_buffer[i];
-                if (ws.m_inputRate == 0u && ws.m_type == 2 && ws.m_water <= naturalDrainageSourceMaxQuantity && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
+                WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
+                if (ws.m_inputRate == 0u && ws.m_type == 2 && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
                 {
 
                     previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                }
+                } /*else
+                {
+                    Debug.Log("[RF]Purgewatersources Didn't Purge Watersource " + i.ToString());
+                    Debug.Log("[RF]PurgeWaterSources inputRate = " + ws.m_inputRate.ToString());
+                    Debug.Log("[RF]PurgeWaterSources m_type = " + ws.m_type.ToString());
+                    Debug.Log("[RF]PurgeWaterSources Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1) is " + Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)).ToString());
+                    int DAGridX = DrainageAreaGrid.CheckDrainageAreaGridX(ws.m_outputPosition);
+                    int DAGridZ = DrainageAreaGrid.CheckDrainageAreaGridZ(ws.m_outputPosition);
+                    int DAGridID = DAGridZ * DrainageAreaGrid.drainageAreaGridCoefficient + DAGridX;
+                    Debug.Log("[RF]PurgeWaterSources DAGridID = " + DAGridID.ToString());
+                    if (DrainageAreaGrid.DrainageAreaDictionary.ContainsKey(DAGridID))
+                    {
+                        if (DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.x == ws.m_outputPosition.x && DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.z == ws.m_outputPosition.z)
+                        {
+                            Debug.Log("[RF]PurgeWaterSources DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition == ws.m_outputPosition");
+                            previousStormWaterSourceIDs.Add((ushort)(i + 1));
+                        }
+                    }
+                }*/
             }
             foreach (ushort id in previousStormWaterSourceIDs)
             {
-                _waterSimulation.ReleaseWaterSource(id);
+                Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id);
             }
         }
-        
+
+        public static void PurgeFacilityWaterSources()
+        {
+            List<ushort> previousStormWaterSourceIDs = new List<ushort>();
+
+            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size - 1; i++)
+            {
+                WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
+                if (ws.m_inputRate == 0u && ws.m_type == 2 && Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
+                {
+
+                    previousStormWaterSourceIDs.Add((ushort)(i + 1));
+                }/*
+                else
+                {
+                    Debug.Log("[RF]Purgewatersources Didn't Purge Watersource " + i.ToString());
+                    Debug.Log("[RF]PurgeWaterSources inputRate = " + ws.m_inputRate.ToString());
+                    Debug.Log("[RF]PurgeWaterSources m_type = " + ws.m_type.ToString());
+                    Debug.Log("[RF]PurgeWaterSources Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1) is " + Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)).ToString());
+                    int DAGridX = DrainageAreaGrid.CheckDrainageAreaGridX(ws.m_outputPosition);
+                    int DAGridZ = DrainageAreaGrid.CheckDrainageAreaGridZ(ws.m_outputPosition);
+                    int DAGridID = DAGridZ * DrainageAreaGrid.drainageAreaGridCoefficient + DAGridX;
+                    Debug.Log("[RF]PurgeWaterSources DAGridID = " + DAGridID.ToString());
+                    if (DrainageAreaGrid.DrainageAreaDictionary.ContainsKey(DAGridID))
+                    {
+                        if (DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.x == ws.m_outputPosition.x && DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.z == ws.m_outputPosition.z)
+                        {
+                            Debug.Log("[RF]PurgeWaterSources DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition == ws.m_outputPosition");
+                            previousStormWaterSourceIDs.Add((ushort)(i + 1));
+                        }
+                    }
+                }*/
+            }
+            foreach (ushort id in previousStormWaterSourceIDs)
+            {
+                Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id); //FIX THIS! This can cause problems since the facilities still think they are attached to a water source.
+            }
+        }
+
         public static void CleanUpCycle()
         {
             if (Hydrology.instance.initialized == true && Hydrology.instance.loaded == true)
@@ -968,7 +855,7 @@ namespace Rainfall
         public static void Terminate()
         {
             Hydrology.instance.terminated = true;
-            DrainageBasinGrid.Clear();
+            DrainageAreaGrid.Clear();
         }
         
     }
