@@ -1246,9 +1246,10 @@ namespace Rainfall
                         if (num > sourceData.m_water)
                         {
                             num = sourceData.m_water;
+                            /*
                             if (!Hydraulics.instance._SDoutletsToReleaseWaterSources.Contains(buildingID)) {
                                 Hydraulics.instance._SDoutletsToReleaseWaterSources.Add(buildingID);
-                            }
+                            }*/
                         }
                         //Debug.Log("[RF] num is " + num.ToString() + " souce water is " + sourceData.m_water.ToString());
 

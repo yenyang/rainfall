@@ -59,6 +59,10 @@ namespace Rainfall
         {
             generateDraiangeBasinGrid();
             awake = true;
+            /*if (!WaterSourceManager.AreYouAwake())
+            {
+                WaterSourceManager.Awake();
+            }*/
         }
 
         public static void Clear()
