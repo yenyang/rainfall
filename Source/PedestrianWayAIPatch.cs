@@ -22,7 +22,7 @@ namespace Rainfall
             if (!__instance.m_invisible)
             {
                 NetManager instance = Singleton<NetManager>.instance;
-                Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood);
+                Notification.Problem1 problem = Notification.RemoveProblems(data.m_problems, Notification.Problem1.Flood);
                 NetManager _netManager = Singleton<NetManager>.instance;
                 Vector3 startPosition = _netManager.m_nodes.m_buffer[data.m_startNode].m_position;
                 Vector3 endPosition = _netManager.m_nodes.m_buffer[data.m_endNode].m_position;
@@ -75,14 +75,14 @@ namespace Rainfall
                             Debug.Log("[RF]PedestrianWayAIPatch Really Flooded");
                         data.m_modifiedIndex = Singleton<SimulationManager>.instance.m_currentBuildIndex++;
                     }
-                    problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                    problem = Notification.AddProblems(problem, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                 }
                 else
                 {
                     data.m_flags &= ~NetSegment.Flags.Flooded;
                     if (num > vector.y + PedestrianPathFloodingTolerance && FloodingTimers.instance.getSegmentFloodingElapsedTime(segmentID) >= PedestrianPathFloodingTimer && PathwaySufferFlooding && !preventFlood)
                     {
-                        problem = Notification.AddProblems(problem, Notification.Problem.Flood);
+                        problem = Notification.AddProblems(problem, Notification.Problem1.Flood);
                         if (logging)
                             Debug.Log("[RF]PedestrianWayAIPatch Flooding");
                     }

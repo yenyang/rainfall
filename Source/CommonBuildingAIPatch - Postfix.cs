@@ -21,9 +21,9 @@ namespace Rainfall
             StormDrainAI stormDrainAI = data.Info.m_buildingAI as StormDrainAI;
             if (stormDrainAI != null)
                 if (stormDrainAI.m_filter != false &
-                    (data.m_problems & Notification.Problem.LineNotConnected) == Notification.Problem.None
-                    && (data.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None
-                    && (data.m_problems & Notification.Problem.Electricity) == Notification.Problem.None) {
+                    (data.m_problems & Notification.Problem1.LineNotConnected) == Notification.Problem1.None
+                    && (data.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None
+                    && (data.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None) {
 
                     int pollutantAccumulation = Hydraulics.removePollutants(buildingID, Hydraulics.getPollutants(buildingID));
                     data.m_garbageBuffer += (ushort)(pollutantAccumulation);
@@ -32,12 +32,12 @@ namespace Rainfall
             }
             
 
-            if ((data.m_problems & Notification.Problem.Flood) == Notification.Problem.Flood && (data.m_problems & Notification.Problem.MajorProblem) != Notification.Problem.None)
+            if ((data.m_problems & Notification.Problem1.Flood) == Notification.Problem1.Flood && (data.m_problems & Notification.Problem1.MajorProblem) != Notification.Problem1.None)
             {
                 __result = FloodingTimers.instance.getLastHandleCommonConsumptionEfficiency(buildingID);
                 if (logging)
                     Debug.Log("[RF]CommonBuildingAI.handleCommonConsumption initially flooded");
-            } else if ((data.m_problems & Notification.Problem.Flood) == Notification.Problem.Flood && (data.m_problems & Notification.Problem.MajorProblem) == Notification.Problem.None)
+            } else if ((data.m_problems & Notification.Problem1.Flood) == Notification.Problem1.Flood && (data.m_problems & Notification.Problem1.MajorProblem) == Notification.Problem1.None)
             {
                 __result *= 2;
                 FloodingTimers.instance.setLastHandleCommonConsumptionEfficiency(buildingID, __result);
@@ -51,7 +51,7 @@ namespace Rainfall
 
             if (logging)
                 Debug.Log("[RF]CommonBuildingAI.handleCommonConsumption initial __result = " + __result.ToString());
-            data.m_problems = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood);
+            data.m_problems = Notification.RemoveProblems(data.m_problems, Notification.Problem1.Flood);
             float num21 = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(data.m_position));
             float buildingFloodedTolerance = OptionHandler.getSliderSetting("BuildingFloodedTolerance");
             float buildingFloodingTolerance = OptionHandler.getSliderSetting("BuildingFloodingTolerance");
@@ -79,13 +79,13 @@ namespace Rainfall
             if (num21 > data.m_position.y + buildingFloodedTolerance && FloodingTimers.instance.getBuildingFloodedElapsedTime(buildingID) >= OptionHandler.getSliderSetting("BuildingFloodedTimer") && OptionHandler.getCheckboxSetting("BuildingSufferFlooded") && !preventFlood)
             {
                 __result = Mathf.RoundToInt((float)__result*OptionHandler.getSliderSetting("BuildingFloodedEfficiency"));
-                data.m_problems = Notification.AddProblems(data.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                data.m_problems = Notification.AddProblems(data.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
             }
             //add flooding tolerance
             else if (num21 > data.m_position.y + buildingFloodingTolerance && FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID) >= OptionHandler.getSliderSetting("BuildingFloodingTimer") && OptionHandler.getCheckboxSetting("BuildingSufferFlooding") && !preventFlood)
             {
                 __result = Mathf.RoundToInt((float)__result * OptionHandler.getSliderSetting("BuildingFloodingEfficiency")); 
-                data.m_problems = Notification.AddProblems(data.m_problems, Notification.Problem.Flood);
+                data.m_problems = Notification.AddProblems(data.m_problems, Notification.Problem1.Flood);
                 if (FloodingTimers.instance.getBuildingFloodedElapsedTime(buildingID) != -1f && num21 < data.m_position.y + buildingFloodedTolerance)
                 {
                     FloodingTimers.instance.resetBuildingFloodedStartTime(buildingID);

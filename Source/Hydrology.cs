@@ -65,8 +65,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.05";
-        private readonly string buildTimestamp = "2022.08.06 7:30am";
+        private readonly string versionNumber = "V2.06";
+        private readonly string buildTimestamp = "2022.09.14 2:58pm";
 
         private int initialTileCount = 0;
 
@@ -239,6 +239,7 @@ namespace Rainfall
             } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageAreaGrid.areYouAwake())
             {
                 DrainageAreaGrid.Clear();
+                //WaterSourceManager.Clear();
                 return;
             } else if (eightyOneTileCheckPeriod > 0f)
             {
@@ -247,7 +248,12 @@ namespace Rainfall
             {
                 DrainageAreaGrid.updateDrainageAreaGridForNewTile(logging);
                 eightyOneTileCheckPeriod = 15f;
-            }
+            } 
+            /*if (!WaterSourceManager.AreYouAwake())
+            {
+                WaterSourceManager.Awake();
+                return;
+            }*/
 
             if (buildingToReviewAndAdd.Count > 0)
             {
@@ -755,7 +761,7 @@ namespace Rainfall
         {
             List<ushort> previousStormWaterSourceIDs = new List<ushort>();
 
-            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size - 1; i++)
+            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size; i++)
             {
                 WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
                 if (ws.m_inputRate == 0u && ws.m_type == 2 && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
@@ -782,9 +788,21 @@ namespace Rainfall
                     }
                 }*/
             }
-            foreach (ushort id in previousStormWaterSourceIDs)
+            for (int i = 0; i < Singleton<BuildingManager>.instance.m_buildings.m_buffer.Length; i++)
             {
-                Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id);
+                if (previousStormWaterSourceIDs.Contains(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource))
+                {
+                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
+                    previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
+                    Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource = 0;
+                }
+            }
+            if (previousStormWaterSourceIDs.Count > 0)
+            {
+                foreach (ushort id in previousStormWaterSourceIDs)
+                {
+                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id);
+                }
             }
         }
 
@@ -792,7 +810,7 @@ namespace Rainfall
         {
             List<ushort> previousStormWaterSourceIDs = new List<ushort>();
 
-            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size - 1; i++)
+            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size; i++)
             {
                 WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
                 if (ws.m_inputRate == 0u && ws.m_type == 2 && Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
@@ -820,9 +838,21 @@ namespace Rainfall
                     }
                 }*/
             }
-            foreach (ushort id in previousStormWaterSourceIDs)
+            for (int i=0; i<Singleton<BuildingManager>.instance.m_buildings.m_buffer.Length; i++)
             {
-                Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id); //FIX THIS! This can cause problems since the facilities still think they are attached to a water source.
+                if (previousStormWaterSourceIDs.Contains(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource))
+                {
+                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
+                    previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
+                    Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource = 0;
+                }
+            }
+            if (previousStormWaterSourceIDs.Count > 0)
+            {
+                foreach (ushort id in previousStormWaterSourceIDs)
+                {
+                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id);
+                }
             }
         }
 

@@ -737,14 +737,14 @@ namespace Rainfall
                         if ((buildingData.m_flags & Building.Flags.Outgoing) != Building.Flags.Outgoing)
                         {
                             buildingData.m_flags |= Building.Flags.Outgoing;
-                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                         }
                         finalProductionRate = 0;
                     }
                     else if ((buildingData.m_flags & Building.Flags.Outgoing) == Building.Flags.Outgoing)
                     {
                         buildingData.m_flags &= ~Building.Flags.Outgoing;
-                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                     }
 
 
@@ -755,14 +755,14 @@ namespace Rainfall
                             if ((buildingData.m_flags & Building.Flags.Loading1) != Building.Flags.Loading1)
                             {
                                 buildingData.m_flags |= Building.Flags.Loading1;
-                                buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.NoPlaceforGoods);
+                                buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.NoPlaceforGoods);
                             }
                             finalProductionRate = 0;
                         }
                         else if ((buildingData.m_flags & Building.Flags.Loading1) == Building.Flags.Loading1)
                         {
                             buildingData.m_flags &= ~Building.Flags.Loading1;
-                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.NoPlaceforGoods);
+                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.NoPlaceforGoods);
                         }
                     }
 
@@ -776,14 +776,14 @@ namespace Rainfall
                             if ((buildingData.m_flags & Building.Flags.CapacityFull) != Building.Flags.CapacityFull)
                             {
                                 buildingData.m_flags |= Building.Flags.CapacityFull;
-                                buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                                buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                             }
                             finalProductionRate = 0;
                         }
                         else if ((buildingData.m_flags & Building.Flags.CapacityFull) == Building.Flags.CapacityFull)
                         {
                             buildingData.m_flags &= ~Building.Flags.CapacityFull;
-                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                         }
                     }
                     float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(buildingData.m_position));
@@ -798,11 +798,11 @@ namespace Rainfall
                         Debug.Log("[RF].SDai There is no water on top of the inlet. Production Rate = 0.");
                     }*/
                     int capturedWater;
-                    bool flag1 = (buildingData.m_problems & Notification.Problem.NoPlaceforGoods) == Notification.Problem.None;
-                    bool flag2 = (buildingData.m_problems & Notification.Problem.LineNotConnected) == Notification.Problem.None;
-                    bool flag3 = (buildingData.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
-                    bool flag4 = (buildingData.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
-                    bool flag6 = (buildingData.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                    bool flag1 = (buildingData.m_problems & Notification.Problem1.NoPlaceforGoods) == Notification.Problem1.None;
+                    bool flag2 = (buildingData.m_problems & Notification.Problem1.LineNotConnected) == Notification.Problem1.None;
+                    bool flag3 = (buildingData.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
+                    bool flag4 = (buildingData.m_problems & Notification.Problem1.LandfillFull) == Notification.Problem1.None;
+                    bool flag6 = (buildingData.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                     bool flag5 = finalProductionRate > 0;
                     if (flag1 && flag2 && flag3 && flag4 && flag5 && flag6)
                     {
@@ -849,7 +849,7 @@ namespace Rainfall
                                     buildingData.m_flags |= Building.Flags.CapacityFull;
                                     //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has flags " + buildingData.m_flags.ToString());
                                     //Debug.Log("[RF].StormDrainAI building " + buildingID + " has problems " + buildingData.m_problems.ToString());
-                                    buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                                    buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                                     // Debug.Log("[RF].StormDrainAI building " + buildingID + " now has problems " + buildingData.m_problems.ToString());
                                 }
                             }
@@ -859,7 +859,7 @@ namespace Rainfall
                                 {
                                     // Debug.Log("[RF].StormDrainAI No longer Full");
                                     buildingData.m_flags &= ~Building.Flags.CapacityFull;
-                                    buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                                    buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                                 }
                             }
 
@@ -893,13 +893,13 @@ namespace Rainfall
                         if ((buildingData.m_flags & Building.Flags.Incoming) != Building.Flags.Incoming)
                         {
                             buildingData.m_flags |= Building.Flags.Incoming;
-                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                         }
                     }
                     else if ((buildingData.m_flags & Building.Flags.Incoming) == Building.Flags.Incoming)
                     {
                         buildingData.m_flags &= ~Building.Flags.Incoming;
-                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                     }
                     //Debug.Log("[RF].StormDrainAI  Total StormwaterAccumulation = " + currentStormWaterAccumulation.ToString());
                     /*if (this.m_waterLocationOffset.z == 0 && buildingData.Width <= 1)
@@ -913,7 +913,7 @@ namespace Rainfall
                     if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
                     {
                         finalProductionRate = 20;
-                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     }
                     else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
                     {
@@ -926,14 +926,14 @@ namespace Rainfall
                             finalProductionRate = 50;
                             //Debug.Log("[RF].StormDrainAI ProduceGoods-Outlet SDfloodingRateModifier array out of index error");
                         }
-                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.Flood);
+                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.Flood);
                     }
                     else
                     {
-                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.Flood);
-                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood);
+                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     }
-                    if ((buildingData.m_problems & Notification.Problem.Electricity) != Notification.Problem.None)
+                    if ((buildingData.m_problems & Notification.Problem1.Electricity) != Notification.Problem1.None)
                     {
                         finalProductionRate = 0;
                     }
@@ -979,7 +979,7 @@ namespace Rainfall
                                         buildingData.m_flags |= Building.Flags.CapacityFull;
                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has flags " + buildingData.m_flags.ToString());
                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " has problems " + buildingData.m_problems.ToString());
-                                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                                        buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                                         //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has problems " + buildingData.m_problems.ToString());
                                     }
 
@@ -991,7 +991,7 @@ namespace Rainfall
                                     {
                                         // Debug.Log("[RF].StormDrainAI No longer Full");
                                         buildingData.m_flags &= ~Building.Flags.CapacityFull;
-                                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                                     }
                                 }
                                 Hydraulics.setHydraulicRate(buildingID, dumpedQuantity);
@@ -1017,7 +1017,7 @@ namespace Rainfall
                         {
                             // Debug.Log("[RF].StormDrainAI No longer Full");
                             buildingData.m_flags &= ~Building.Flags.CapacityFull;
-                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                         }
                     }
 
@@ -1045,13 +1045,13 @@ namespace Rainfall
                         if ((buildingData.m_flags & Building.Flags.Incoming) != Building.Flags.Incoming)
                         {
                             buildingData.m_flags |= Building.Flags.Incoming;
-                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                         }
                     }
                     else if ((buildingData.m_flags & Building.Flags.Incoming) == Building.Flags.Incoming)
                     {
                         buildingData.m_flags &= ~Building.Flags.Incoming;
-                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LineNotConnected);
+                        buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LineNotConnected);
                     }
                     int detainedQuantitity = Mathf.Min(Hydraulics.removeAreaStormwaterAccumulation(remainingCapacity, buildingID, true), remainingCapacity);
                     Hydraulics.setHydraulicRate(buildingID, detainedQuantitity);
@@ -1068,7 +1068,7 @@ namespace Rainfall
                             buildingData.m_flags |= Building.Flags.CapacityFull;
                             //Debug.Log("[RF].StormDrainAI building " + buildingID + " now has flags " + buildingData.m_flags.ToString());
                             //Debug.Log("[RF].StormDrainAI building " + buildingID + " has problems " + buildingData.m_problems.ToString());
-                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                            buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                             // Debug.Log("[RF].StormDrainAI building " + buildingID + " now has problems " + buildingData.m_problems.ToString());
                         }
                     }
@@ -1078,7 +1078,7 @@ namespace Rainfall
                         {
                             // Debug.Log("[RF].StormDrainAI No longer Full");
                             buildingData.m_flags &= ~Building.Flags.CapacityFull;
-                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem.LandfillFull);
+                            buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.LandfillFull);
                         }
                         if (remainingCapacity >= detentionCapacity)
                         {
@@ -1515,13 +1515,13 @@ namespace Rainfall
                 Building currentOutlet = BuildingManager.instance.m_buildings.m_buffer[lowestOutletID];
                 StormDrainAI currentOutletAI = currentOutlet.Info.m_buildingAI as StormDrainAI;
 
-                if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
+                if ((data.m_problems & Notification.Problem1.LineNotConnected) != Notification.Problem1.None)
                 {
                     sb.AppendLine("No outlet " + area + "!");
                     sb.AppendLine("No detention basin  " + area + "!");
                     lines += 2;
                 }
-                else if ((data.m_problems & Notification.Problem.NoPlaceforGoods) != Notification.Problem.None)
+                else if ((data.m_problems & Notification.Problem1.NoPlaceforGoods) != Notification.Problem1.None)
                 {
 
 
@@ -1550,7 +1550,7 @@ namespace Rainfall
                         lines += 1;
                     }
                 }
-                else if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
+                else if ((data.m_problems & Notification.Problem1.LandfillFull) != Notification.Problem1.None)
                 {
                     sb.AppendLine("Not enough outlet capacity!");
                     sb.AppendLine("Not enough detention capacity!");
@@ -1607,19 +1607,19 @@ namespace Rainfall
                 int districtVariableCapacity = (int)Hydraulics.getAreaVariableCapacity(buildingID, Hydraulics.getOutletList());
                 int DistrictHydraulicRate = (int)Hydraulics.getDistrictHydraulicRate(buildingID, Hydraulics.getOutletList());
 
-                if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
+                if ((data.m_problems & Notification.Problem1.LineNotConnected) != Notification.Problem1.None)
                 {
                     sb.AppendLine("No inlets " + area + "!");
                 }
-                else if ((data.m_problems & Notification.Problem.LandfillFull) != Notification.Problem.None)
+                else if ((data.m_problems & Notification.Problem1.LandfillFull) != Notification.Problem1.None)
                 {
                     sb.AppendLine("Outlet rate at capacity!");
                 }
-                else if ((data.m_problems & Notification.Problem.Flood) != Notification.Problem.None && (data.m_problems & Notification.Problem.MajorProblem) != Notification.Problem.None)
+                else if ((data.m_problems & Notification.Problem1.Flood) != Notification.Problem1.None && (data.m_problems & Notification.Problem1.MajorProblem) != Notification.Problem1.None)
                 {
                     sb.AppendLine("Outlet is fully surcharged!");
                 }
-                else if ((data.m_problems & Notification.Problem.Flood) != Notification.Problem.None)
+                else if ((data.m_problems & Notification.Problem1.Flood) != Notification.Problem1.None)
                 {
                     sb.AppendLine("Operating at reduced capacity.");
                 }
@@ -1642,7 +1642,7 @@ namespace Rainfall
                 float basinInvert = basinElevation + this.m_invert;
                 float basinSoffit = basinElevation + this.m_soffit;
                 float basinWSE = Hydraulics.getDetentionBasinWSE(buildingID);
-                if ((data.m_problems & Notification.Problem.LineNotConnected) != Notification.Problem.None)
+                if ((data.m_problems & Notification.Problem1.LineNotConnected) != Notification.Problem1.None)
                 {
                     sb.AppendLine("No inlets " + area + "!");
                 }

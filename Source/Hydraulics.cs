@@ -440,7 +440,7 @@ namespace Rainfall
                                                 if (!_terrainManager.GetClosestWaterPos(ref vector, currentBuildingAI.m_waterEffectDistance))
                                                 {
                                                     _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
-                                                    currentBuilding.m_waterSource = 0;
+                                                    _buildingManager.m_buildings.m_buffer[buildingID].m_waterSource = 0;
                                                 }
                                             }
                                             
@@ -516,7 +516,7 @@ namespace Rainfall
                                                 if (!_terrainManager.GetClosestWaterPos(ref vector, currentBuildingAI.m_waterEffectDistance))
                                                 {
                                                     _waterSimulation.ReleaseWaterSource(currentBuilding.m_waterSource);
-                                                    currentBuilding.m_waterSource = 0;
+                                                    _buildingManager.m_buildings.m_buffer[buildingID].m_waterSource = 0;
                                                 }
                                             }
 
@@ -553,7 +553,7 @@ namespace Rainfall
                                     catch (Exception e)
                                     {
                                         Debug.Log("Tried to elevate natural drainage asset. encountered exception " + e.ToString());
-                                        ;
+                                        
                                     }
                                 }
                             }
@@ -693,27 +693,32 @@ namespace Rainfall
             Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
             byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
             string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
-            bool overrideDistrictControl = false;
+            bool selectedOutletOverridesDistricControl = false;
             if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
             {
-                overrideDistrictControl = true;
+                selectedOutletOverridesDistricControl = true;
             }
             int areaOutletCapacity = 0;
             HashSet<ushort> _SDOutletIterator = new HashSet<ushort>(Hydraulics.instance._SDoutlets);
             foreach (ushort id in _SDOutletIterator)
             {
+                bool currentOutletOverrideDistrictControl = false;
+                if (Hydraulics.instance._buildingManager.GetBuildingName((ushort)id, InstanceID.Empty) != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)id, InstanceID.Empty))
+                {
+                    currentOutletOverrideDistrictControl = true;
+                }
                 int StormDrainAssetControlOption = OptionHandler.getDropdownSetting("StormDrainAssetControlOption");
                 if (StormDrainAssetControlOption == OptionHandler._NoControlOption
                 || StormDrainAssetControlOption == OptionHandler._DistrictControlOption && Hydraulics.instance._districts[id] == district
                 || StormDrainAssetControlOption == OptionHandler._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
-                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
-                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
+                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedOutletOverridesDistricControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedOutletOverridesDistricControl == false && currentOutletOverrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                         StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                         if (currentBuildingAI != null)
                         {
-                            if (currentBuildingAI.m_stormWaterOutlet != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                            if (currentBuildingAI.m_stormWaterOutlet != 0 && (currentBuilding.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None && (currentBuilding.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None)
                             {
                             areaOutletCapacity += Mathf.RoundToInt(currentBuildingAI.m_stormWaterOutlet * OptionHandler.getSliderSetting("OutletRateMultiplier"));
                             }
@@ -734,27 +739,33 @@ namespace Rainfall
             Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
             byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
             string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
-            bool overrideDistrictControl = false;
+            
+            bool selectedInletOverridesDistricControl = false;
             if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
             {
-                overrideDistrictControl = true;
+                selectedInletOverridesDistricControl = true;
             }
             int areaInletCapacity = 0;
             HashSet<ushort> iterator = new HashSet<ushort>(Hydraulics.instance._SDinlets);
             foreach (ushort id in iterator)
             {
+                bool currentInletOverrideDistrictControl = false;
+                if (Hydraulics.instance._buildingManager.GetBuildingName((ushort)id, InstanceID.Empty) != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)id, InstanceID.Empty))
+                {
+                    currentInletOverrideDistrictControl = true;
+                }
                 int StormDrainAssetControlOption = OptionHandler.getDropdownSetting("StormDrainAssetControlOption");
                 if (StormDrainAssetControlOption == OptionHandler._NoControlOption
                 || StormDrainAssetControlOption == OptionHandler._DistrictControlOption && Hydraulics.instance._districts[id] == district
                 || StormDrainAssetControlOption == OptionHandler._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
-                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
-                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
+                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedInletOverridesDistricControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+                || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedInletOverridesDistricControl == false && currentInletOverrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                     if (currentBuildingAI != null)
                     {
-                        if (currentBuildingAI.m_stormWaterIntake != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                        if (currentBuildingAI.m_stormWaterIntake != 0 && (currentBuilding.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None && (currentBuilding.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None)
                         {
                             areaInletCapacity += Mathf.RoundToInt((float)currentBuildingAI.m_stormWaterIntake * OptionHandler.getSliderSetting("InletRateMultiplier"));
                         }
@@ -775,28 +786,33 @@ namespace Rainfall
             Building startingBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[BuildingId];
             byte district = Hydraulics.instance._districtManager.GetDistrict(startingBuilding.m_position);
             string drainageGroup = Hydraulics.instance._buildingManager.GetBuildingName((ushort)BuildingId, InstanceID.Empty);
-            bool overrideDistrictControl = false;
+            bool selectedDetentionOverridesDistricControl = false;
             if (drainageGroup != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)BuildingId, InstanceID.Empty))
             {
-                overrideDistrictControl = true;
+                selectedDetentionOverridesDistricControl = true;
             }
             int areaDetentionCapacity = 0;
             HashSet<ushort> iterator = new HashSet<ushort>(Hydraulics.instance._SDdetentionBasins);
             foreach (ushort id in iterator)
             {
+                bool currentDetentionOverrideDistrictControl = false;
+                if (Hydraulics.instance._buildingManager.GetBuildingName((ushort)id, InstanceID.Empty) != Hydraulics.instance._buildingManager.GetDefaultBuildingName((ushort)id, InstanceID.Empty))
+                {
+                    currentDetentionOverrideDistrictControl = true;
+                }
                 int StormDrainAssetControlOption = OptionHandler.getDropdownSetting("StormDrainAssetControlOption");
 
                 if (StormDrainAssetControlOption == OptionHandler._NoControlOption
                || StormDrainAssetControlOption == OptionHandler._DistrictControlOption && Hydraulics.instance._districts[id] == district
                || StormDrainAssetControlOption == OptionHandler._IDControlOption && Hydraulics.instance._drainageGroups[id] == drainageGroup
-               || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
-               || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
+               || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedDetentionOverridesDistricControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
+               || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && selectedDetentionOverridesDistricControl == false && currentDetentionOverrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
                     StormDrainAI currentBuildingAI = currentBuilding.Info.m_buildingAI as StormDrainAI;
                     if (currentBuildingAI != null)
                     {
-                        if (currentBuildingAI.m_stormWaterDetention != 0 && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                        if (currentBuildingAI.m_stormWaterDetention != 0 && (currentBuilding.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None && (currentBuilding.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None)
                         {
                             areaDetentionCapacity += currentBuildingAI.m_stormWaterDetention;
                         }
@@ -837,8 +853,8 @@ namespace Rainfall
                     if (currentBuildingAI != null)
                     {
                         bool flag1 = currentBuildingAI.m_stormWaterDetention != 0;
-                        bool flag2 = (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
-                        bool flag3 = (currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        bool flag2 = (currentBuilding.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
+                        bool flag3 = (currentBuilding.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                         if (flag1 && flag2)
                         {
                             areaDetainedStormwater += Hydraulics.getDetainedStormwater(id);
@@ -885,7 +901,7 @@ namespace Rainfall
                         {
                             if (currentOutletAI != null)
                             {
-                                if ((currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None)
+                                if ((currentOutlet.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None)
                                 {
                                     int GravityDrainageOption = OptionHandler.getDropdownSetting("GravityDrainageOption");
                                     if (GravityDrainageOption == OptionHandler._ImprovedGravityDrainageOption)
@@ -935,9 +951,9 @@ namespace Rainfall
                             {
                                 bool flag1 = currentDetentionBasinAI.m_stormWaterDetention > 0;
                                 bool flag2 = Hydraulics.instance._districts[id] == district;
-                                bool flag3 = (currentDetentionBasin.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                                bool flag3 = (currentDetentionBasin.m_problems & Notification.Problem1.LandfillFull) == Notification.Problem1.None;
                                 bool flag4 = false;
-                                bool flag5 = (currentDetentionBasin.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                                bool flag5 = (currentDetentionBasin.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                                 int GravityDrainageOption = OptionHandler.getDropdownSetting("GravityDrainageOption");
                                 if (GravityDrainageOption == OptionHandler._ImprovedGravityDrainageOption)
                                 {
@@ -1003,7 +1019,7 @@ namespace Rainfall
                     removeOutlet((ushort)outletId);
                     return false;
                 }
-                if ((currentOutlet.m_problems & Notification.Problem.TurnedOff) != Notification.Problem.None) {
+                if ((currentOutlet.m_problems & Notification.Problem1.TurnedOff) != Notification.Problem1.None) {
                     return false;
                 }
                 int GravityDrainageOption = OptionHandler.getDropdownSetting("GravityDrainageOption");
@@ -1015,7 +1031,7 @@ namespace Rainfall
                     {
                         float outletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
 
-                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > Mathf.Max(currentOutlet.m_position.y + currentOutletAI.m_invert, outletWSE) || currentOutletAI.m_electricityConsumption > 0 && (currentOutlet.m_problems & Notification.Problem.Electricity) == Notification.Problem.None || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem.Electricity) == Notification.Problem.None)
+                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > Mathf.Max(currentOutlet.m_position.y + currentOutletAI.m_invert, outletWSE) || currentOutletAI.m_electricityConsumption > 0 && (currentOutlet.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None)
                             return true;
                         if (currentInletAI.m_culvert == true)
                         {
@@ -1025,9 +1041,9 @@ namespace Rainfall
                     } else if (currentOutletAI.m_stormWaterDetention > 0)
                     {
                         float basinWSE = Hydraulics.getDetentionBasinWSE(outletId);
-                        bool flag3 = (currentOutlet.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                        bool flag3 = (currentOutlet.m_problems & Notification.Problem1.LandfillFull) == Notification.Problem1.None;
                         bool flag4 = false;
-                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > basinWSE || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem.Electricity) == Notification.Problem.None)
+                        if (Mathf.Max(currentInlet.m_position.y, inletWSE) > basinWSE || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None)
                             flag4 = true;
                         if (flag3 && flag4)
                             return true;
@@ -1035,7 +1051,7 @@ namespace Rainfall
                 
                 } else if (GravityDrainageOption == OptionHandler._SimpleGravityDrainageOption)
                 {
-                    if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 && (currentOutlet.m_problems & Notification.Problem.Electricity) == Notification.Problem.None || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem.Electricity) == Notification.Problem.None || currentOutletAI.m_stormWaterDetention > 0)
+                    if (currentInlet.m_position.y > currentOutlet.m_position.y || currentOutletAI.m_electricityConsumption > 0 && (currentOutlet.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None || currentInletAI.m_electricityConsumption > 0 && (currentInlet.m_problems & Notification.Problem1.Electricity) == Notification.Problem1.None || currentOutletAI.m_stormWaterDetention > 0)
                         return true;
                 } else if (GravityDrainageOption == OptionHandler._IgnoreGravityDrainageOption)
                 {
@@ -1079,8 +1095,8 @@ namespace Rainfall
                     {
                         bool flag1 = currentOutletAI.m_stormWaterOutlet > 0;
                         bool flag2 = checkGravityFlowForInlet(inletID, id);
-                        bool flag3 = (currentOutlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
-                        bool flag4 = (currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        bool flag3 = (currentOutlet.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
+                        bool flag4 = (currentOutlet.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                         if (flag1 && flag2 && flag3 && flag4)
                         {
                             outletCapacity += Mathf.RoundToInt(currentOutletAI.m_stormWaterOutlet *OptionHandler.getSliderSetting("OutletRateMultiplier"));
@@ -1127,11 +1143,11 @@ namespace Rainfall
                     {
 
                         bool flag1 = currentOutletAI.m_stormWaterOutlet > 0;
-                        bool flag3 = (currentOutlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                        bool flag3 = (currentOutlet.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
                         float currentOutletWSE = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(currentOutlet.m_position + currentOutletAI.m_waterLocationOffset));
                         float currentOutletElev = Mathf.Max(currentOutletWSE, currentOutlet.m_position.y + currentOutletAI.m_invert);
                         bool flag2 = (currentOutletElev < outletElev);
-                        bool flag4 = (currentOutlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        bool flag4 = (currentOutlet.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                         if (flag1 && flag2 && flag3 && flag4)
                         {
                             outletID = id;
@@ -1161,8 +1177,8 @@ namespace Rainfall
                         if (currentBasinAI.m_stormWaterDetention > 0)
                         {
                             float basinWSE = Hydraulics.getDetentionBasinWSE(id);
-                            bool flag2 = (currentBasin.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
-                            bool flag3 = (currentBasin.m_problems & Notification.Problem.LandfillFull) == Notification.Problem.None;
+                            bool flag2 = (currentBasin.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
+                            bool flag3 = (currentBasin.m_problems & Notification.Problem1.LandfillFull) == Notification.Problem1.None;
                             bool flag4 = false;
                             if (basinWSE < outletElev)
                                 flag4 = true;
@@ -1215,7 +1231,7 @@ namespace Rainfall
                         bool flag2 = true;
                         if (flag1)
                             flag2 = checkGravityFlowForInlet(inletId, outletID);
-                        bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                        bool flag3 = (currentInlet.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
                         if (flag2 && flag3)
                             stormwaterAccumulation += Hydraulics.instance._stormwaterAccumulation[inletId];
                     }
@@ -1254,7 +1270,7 @@ namespace Rainfall
             int minimumStormwaterAccumulation = amount;
             Building outletBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[outletID];
             byte district = Hydraulics.instance._districtManager.GetDistrict(outletBuilding.m_position);
-            if ((outletBuilding.m_problems & Notification.Problem.TurnedOff) != Notification.Problem.None)
+            if ((outletBuilding.m_problems & Notification.Problem1.TurnedOff) != Notification.Problem1.None)
                 return 0;
 
             StormDrainAI outletBuildingAI = outletBuilding.Info.m_buildingAI as StormDrainAI;
@@ -1303,9 +1319,9 @@ namespace Rainfall
                        || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
                        || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district);
                         bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
-                        bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                        bool flag3 = (currentInlet.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
                         bool flag4;
-                        bool flag5 = (currentInlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        bool flag5 = (currentInlet.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                         if (checkGravityFlow == true)
                             flag4 = Hydraulics.checkGravityFlowForInlet(id, outletID);
                         else
@@ -1346,7 +1362,7 @@ namespace Rainfall
                             if (ModSettings.DistrictControl == false)
                                 flag1 = true;
                             bool flag2 = Hydraulics.instance._easyModeSWA[buildingID] > 0;
-                            bool flag3 = (currentBuilding.m_problems & Notification.Problem.Water) == Notification.Problem.None;
+                            bool flag3 = (currentBuilding.m_problems & Notification.Problem1.Water) == Notification.Problem1.None;
                             //Ignoring Gravity Effects for Easy mode because Easy mode
                             if (flag1 && flag2 && flag3)
                             {
@@ -1410,9 +1426,9 @@ namespace Rainfall
                          || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == true && Hydraulics.instance._drainageGroups[id] == drainageGroup
                          || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district);
                         bool flag2 = Hydraulics.instance._stormwaterAccumulation[id] > 0;
-                        bool flag3 = (currentInlet.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None;
+                        bool flag3 = (currentInlet.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None;
                         bool flag4;
-                        bool flag5 = (currentInlet.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None;
+                        bool flag5 = (currentInlet.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None;
                         if (checkGravityFlow == true)
                             flag4 = Hydraulics.checkGravityFlowForInlet(id, outletID);
                         else
@@ -1444,7 +1460,7 @@ namespace Rainfall
                         if (ModSettings.DistrictControl == false)
                             flag1 = true;
                         bool flag2 = Hydraulics.instance._easyModeSWA[buildingID] > 0;
-                        bool flag3 = (currentBuilding.m_problems & Notification.Problem.Water) == Notification.Problem.None;
+                        bool flag3 = (currentBuilding.m_problems & Notification.Problem1.Water) == Notification.Problem1.None;
                         //Ignoring Gravity Effects for Easy mode because Easy mode
                         if (flag1 && flag2 && flag3)
                         {
@@ -1695,7 +1711,7 @@ namespace Rainfall
                         || StormDrainAssetControlOption == OptionHandler._IDOverrideOption && overrideDistrictControl == false && Hydraulics.instance._districts[id] == district)
                 {
                     Building currentBuilding = Hydraulics.instance._buildingManager.m_buildings.m_buffer[id];
-                    if ((currentBuilding.m_problems & Notification.Problem.TurnedOff) == Notification.Problem.None && (currentBuilding.m_problems & Notification.Problem.WaterNotConnected) == Notification.Problem.None)
+                    if ((currentBuilding.m_problems & Notification.Problem1.TurnedOff) == Notification.Problem1.None && (currentBuilding.m_problems & Notification.Problem1.WaterNotConnected) == Notification.Problem1.None)
                         areaVariableCapacity += Hydraulics.instance._variableCapacity[id];
                 }
 

@@ -43,11 +43,13 @@ namespace Rainfall
 			private float runoffCoefficient;
 			private float contributingArea;
 			private Vector3 pointOfConcentration;
-			public subbasin(float c, float a, Vector3 poc)
+			private float pollutionRatio;
+			public subbasin(float c, float a, Vector3 poc, float d)
             {
 				this.runoffCoefficient = c;
 				this.contributingArea = a;
 				this.pointOfConcentration = poc;
+				this.pollutionRatio = d;
             }
 			public float RunoffCoefficient
             {
@@ -64,7 +66,12 @@ namespace Rainfall
 				get { return pointOfConcentration; }
 				set { pointOfConcentration = value; }
             }
-		}
+            public float PollutionRatio
+            {
+                get { return pollutionRatio; }
+                set { pollutionRatio = value; }
+            }
+        }
 		public DrainageArea(int newID, Vector3 newPosition)
 		{
 			
@@ -83,6 +90,7 @@ namespace Rainfall
 			
 			
 			compositeRunoffCoefficient = 0.2f;
+			m_pollution = 0f;
 		}
 
 		public void recalculateCompositeRunoffCoefficent(bool logging)
@@ -99,7 +107,7 @@ namespace Rainfall
             {
 				return 0f;
             }
-			subbasin unimprovedSubbasin = new subbasin(OptionHandler.getSliderSetting("UndevelopedRunoffCoefficient"), 0f, m_position);
+			subbasin unimprovedSubbasin = new subbasin(OptionHandler.getSliderSetting("UndevelopedRunoffCoefficient"), 0f, m_position, 0f);
 			subbasin segmentSubbasin = calculateSegmentImperviousArea(logging);
 			bool calculatePOCfromBuildings = true;
 			if (segmentSubbasin.PointOfConcentration != m_position)
@@ -112,6 +120,10 @@ namespace Rainfall
             {
 				m_outputPosition = buildingSubbasin.PointOfConcentration;
             }
+
+			if (buildingSubbasin.PollutionRatio > 0f) m_pollution = buildingSubbasin.ContributingArea * buildingSubbasin.PollutionRatio / basinArea;
+			else m_pollution = 0f;
+
 			float improvedSubbasinArea = buildingSubbasin.ContributingArea + segmentSubbasin.ContributingArea;
 			if (improvedSubbasinArea < basinArea) {
 				unimprovedSubbasin.ContributingArea = basinArea - improvedSubbasinArea;
@@ -142,13 +154,14 @@ namespace Rainfall
 		private subbasin calculateBuildingImperviousArea(bool logging, bool calculatePOC)
         {
 			
-			subbasin buildingSubbasin = new subbasin(0f, 0f, m_position);
+			subbasin buildingSubbasin = new subbasin(0f, 0f, m_position, 0f);
 			if (!validateDrainageAreaID())
             {
 				return buildingSubbasin;
             }
 			float totalArea = 0f;
 			float cummulativeImperviousArea = 0f;
+			float cummulativePollutionArea = 0f;
 			List<ushort> removeBuildingIDS = new List<ushort>();
 			foreach (ushort buildingID in this.m_buildings)
 			{
@@ -163,6 +176,7 @@ namespace Rainfall
 					BuildingAI ai = currentBuilding.Info.m_buildingAI;
 					float currentBuildingArea = (float)(currentBuilding.Length * currentBuilding.Width) * 64f;
 					float currentBuildingRunoffCoefficient = 0.0f;
+					bool currentBuildingPollution = false;
 					if (OptionHandler.PublicBuildingAICatalog.ContainsKey(ai.GetType()))
 					{
 						string aiString = OptionHandler.PublicBuildingAICatalog[ai.GetType()];
@@ -182,14 +196,17 @@ namespace Rainfall
 						else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.PlayerIndustryOre)
 						{
 							currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOre");
+							currentBuildingPollution = true;
 						}
 						else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.PlayerIndustryOil)
 						{
 							currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOil");
+							currentBuildingPollution = true;
 						}
 						else
 						{
 							currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryGeneral");
+							currentBuildingPollution = true;
 						}
 					}
 					else if (ai is PrivateBuildingAI)
@@ -255,23 +272,26 @@ namespace Rainfall
 							if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialFarming)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryAgriculture");
-							}
+                            }
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialForestry)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryForest");
-							}
+                            }
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialOre)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOre");
-							}
+                                currentBuildingPollution = true;
+                            }
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialOil)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOil");
-							}
+                                currentBuildingPollution = true;
+                            }
 							else
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryGeneral");
-							}
+                                currentBuildingPollution = true;
+                            }
 						}
 						else if (ai is OfficeBuildingAI)
 						{
@@ -296,11 +316,14 @@ namespace Rainfall
 						currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("DefaultRunoffCoefficient");
 					}
 					cummulativeImperviousArea += (float)currentBuildingArea * currentBuildingRunoffCoefficient;
-					if (logging == true)
+					if (currentBuildingPollution) cummulativePollutionArea += (float)currentBuildingArea;
+
+                    if (logging == true)
 					{
 						Debug.Log("[RF]DrainageArea.calculatedBuildingImperviousArea " + "current building ai = " + ai.GetType().ToString() + " current building area = " + ((decimal)currentBuildingArea).ToString() + " currentBuildingRunoffCoefficent = " + ((decimal)currentBuildingRunoffCoefficient).ToString());
 					}
 					totalArea += currentBuildingArea;
+
 					if (calculatePOC)
 					{
 						Vector3 potentialPOC = new Vector3();
@@ -328,6 +351,7 @@ namespace Rainfall
 			{
 				buildingSubbasin.ContributingArea = totalArea;
 				buildingSubbasin.RunoffCoefficient = cummulativeImperviousArea / totalArea;
+				buildingSubbasin.PollutionRatio = cummulativePollutionArea / totalArea;
 			}
 			if (logging == true) Debug.Log("[RF]DrainageArea.calculateBuildingImperviousArea buildingSubbasin.POC.y = " + buildingSubbasin.PointOfConcentration.y);
 			return buildingSubbasin;
@@ -335,7 +359,7 @@ namespace Rainfall
 		private subbasin calculateSegmentImperviousArea(bool logging)
         {
 			logging = false;
-			subbasin segmentSubbasin = new subbasin(0f, 0f, m_position);
+			subbasin segmentSubbasin = new subbasin(0f, 0f, m_position, 0f);
 			if (!validateDrainageAreaID())
 			{
 				return segmentSubbasin;
@@ -428,7 +452,7 @@ namespace Rainfall
 			Building currentBuilding = _buildingManager.m_buildings.m_buffer[id];
 			BuildingAI ai = currentBuilding.Info.m_buildingAI;
 			Vector3 buildingPosition = currentBuilding.m_position;
-			List<Type> unacceptableBuildingTypes = new List<Type>() { typeof(WaterFacilityAI), typeof(WindTurbineAI), typeof(WildlifeSpawnPointAI), typeof(AnimalMonumentAI), typeof(PowerPoleAI), typeof(DecorationBuildingAI), typeof(StormDrainAI), /*typeof(SnowpackAI),*/ typeof(SnowDumpAI), typeof(WaterCleanerAI), typeof(EarthquakeSensorAI), typeof(RadioMastAI), typeof(SpaceRadarAI), typeof(TaxiStandAI), typeof(TollBoothAI), typeof(TsunamiBuoyAI), typeof(WaterJunctionAI) };
+			List<Type> unacceptableBuildingTypes = new List<Type>() { typeof(WaterFacilityAI), typeof(WindTurbineAI), typeof(WildlifeSpawnPointAI), typeof(AnimalMonumentAI), typeof(PowerPoleAI), typeof(DecorationBuildingAI), typeof(StormDrainAI), /*typeof(SnowpackAI),*/ typeof(SnowDumpAI), typeof(WaterCleanerAI), typeof(EarthquakeSensorAI), typeof(RadioMastAI), typeof(SpaceRadarAI), typeof(TaxiStandAI), typeof(TollBoothAI), typeof(TsunamiBuoyAI), typeof(WaterJunctionAI), typeof(NaturalDrainageAI) };
 			if (unacceptableBuildingTypes.Contains(ai.GetType()))
 			{
 				//Debug.Log("[RF].DrainageAreaGrid reviewBuidling Found unacceptable building!");

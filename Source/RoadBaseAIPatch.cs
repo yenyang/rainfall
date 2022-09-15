@@ -17,7 +17,7 @@ namespace Rainfall
         {
             SimulationManager instance = Singleton<SimulationManager>.instance;
             NetManager instance2 = Singleton<NetManager>.instance;
-            Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood);
+            Notification.Problem1 problem = Notification.RemoveProblems(data.m_problems, Notification.Problem1.Flood);
             //Debug.Log("[RF]RoadBaseAIPatch Postfix");
             bool timerLogging = false;
             Vector3 position = instance2.m_nodes.m_buffer[(int)data.m_startNode].m_position;
@@ -80,7 +80,7 @@ namespace Rainfall
                     //Debug.Log("[RF]RoadBaseAIDetour segmentID " + segmentID.ToString() + " slope = " + slope.ToString() + " wse = " + num6.ToString() + " vector.y " + vector.y.ToString() + " tolerance " + ((float)ModSettings.RoadwayFloodedTolerance / 100 + additionalToleranceForSlope * 2).ToString());
                     data.m_flags |= NetSegment.Flags.Flooded;
                     //Debug.Log("[RF] Successfully detoured roadway flooded tolerance");
-                    problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                    problem = Notification.AddProblems(problem, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     /*DisasterData floodedSinkHoleData = new DisasterData();
                     floodedSinkHoleData.m_targetPosition = data.m_middlePosition;
                     floodedSinkHoleData.m_intensity = (byte)instance.m_randomizer.Int32(100u);
@@ -101,7 +101,7 @@ namespace Rainfall
                         if (timerLogging)
                             Debug.Log("[RF]RoadwayBaseAI Flood");
                         flag = true;
-                        problem = Notification.AddProblems(problem, Notification.Problem.Flood);
+                        problem = Notification.AddProblems(problem, Notification.Problem1.Flood);
                     }
                     else if (num6 < vector.y + RoadwayFloodingTolerance && FloodingTimers.instance.getSegmentFloodingElapsedTime(segmentID) != -1f)
                     {
@@ -193,7 +193,7 @@ namespace Rainfall
                             }
                             if (num9 >= 192)
                             {
-                                problem = Notification.AddProblems(problem, Notification.Problem.Snow);
+                                problem = Notification.AddProblems(problem, Notification.Problem1.Snow);
                             }
                             District[] expr_63D_cp_0_cp_0 = instance3.m_districts.m_buffer;
                             byte expr_63D_cp_0_cp_1 = district;

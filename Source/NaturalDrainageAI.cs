@@ -192,6 +192,35 @@ namespace Rainfall
                 waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
                 
             }
+
+            if (this.m_naturalDrainageMultiplier > 1f && this.m_standingWaterDepth <= 0) {
+                if (buildingData.m_waterSource == 0)
+                {
+                    HandleFloodSource(buildingID, ref buildingData, true, (int)(50f * m_naturalDrainageMultiplier * Singleton<WeatherManager>.instance.m_currentRain), (int)(1000f * m_naturalDrainageMultiplier), 1f);
+                } else
+                {
+                    WaterSource watersourceData = waterSimulation.LockWaterSource(buildingData.m_waterSource);
+
+                    
+                    if (Singleton<WeatherManager>.instance.m_currentRain == 0f || Hydrology.instance.terminated == true)
+                    {
+                        watersourceData.m_outputRate = 0u;
+                    }
+                    else if (Singleton<WeatherManager>.instance.m_currentRain > 0f)
+                    {
+                        watersourceData.m_outputRate = (uint)(m_naturalDrainageMultiplier * Singleton<WeatherManager>.instance.m_currentRain * OptionHandler.getSliderSetting("GlobalRunoffScalar") * OptionHandler.getSliderSetting("FloodSpawnerScalar"));
+                    }
+                    if (watersourceData.m_water < (uint)(50f * m_naturalDrainageMultiplier))
+                    {
+                        watersourceData.m_water = (uint)(1000f * m_naturalDrainageMultiplier);
+                    }
+                    waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
+                }
+
+            }
+
+                
+
             base.ProduceGoods(buildingID, ref buildingData, ref frameData, productionRate, finalProductionRate, ref behaviour, aliveWorkerCount, totalWorkerCount, workPlaceCount, aliveVisitorCount, totalVisitorCount, visitPlaceCount);
 
         }
@@ -215,7 +244,7 @@ namespace Rainfall
                 sourceData2.m_water = 1000u;
                 //Debug.Log("[RF]NDai.HWS vector2 = " + vector2.ToString());
 
-                sourceData2.m_target = (ushort)(vector2.y+this.m_standingWaterDepth);
+                sourceData2.m_target = (ushort)(vector2.y + this.m_standingWaterDepth);
                 //Debug.Log("[RF]NDai.HWS target = " + sourceData2.m_target.ToString());
                 if (!waterSimulation.CreateWaterSource(out data.m_waterSource, sourceData2))
                 {
@@ -225,6 +254,35 @@ namespace Rainfall
             return true;
         }
 
+        private bool HandleFloodSource(ushort buildingID, ref Building data, bool output, int rate, int max, float radius)
+        {
+            TerrainManager instance = Singleton<TerrainManager>.instance;
+            WaterSimulation waterSimulation = instance.WaterSimulation;
+            if (data.m_waterSource != 0)
+            {
+                return false;
+            }
+            else
+            {
+                Vector3 vector2 = data.CalculatePosition(this.m_waterLocationOffset);
+                WaterSource sourceData2 = default(WaterSource);
+                sourceData2.m_type = 2;
+                sourceData2.m_inputPosition = vector2;
+                sourceData2.m_outputPosition = vector2;
+                sourceData2.m_outputRate = (uint)(m_naturalDrainageMultiplier * Singleton<WeatherManager>.instance.m_currentRain * OptionHandler.getSliderSetting("GlobalRunoffScalar") * OptionHandler.getSliderSetting("FloodSpawnerScalar"));
+                sourceData2.m_inputRate = 0u;
+                sourceData2.m_water = (uint)(1000f * m_naturalDrainageMultiplier);
+                //Debug.Log("[RF]NDai.HWS vector2 = " + vector2.ToString());
+
+                sourceData2.m_target = (ushort)(vector2.y + 25f);
+                //Debug.Log("[RF]NDai.HWS target = " + sourceData2.m_target.ToString());
+                if (!waterSimulation.CreateWaterSource(out data.m_waterSource, sourceData2))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         protected override bool CanSufferFromFlood( out bool onlyCollapse)
         {

@@ -17,7 +17,6 @@ namespace Rainfall
                 {
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "ChirpForecasts",                  readableName = "#RainForecast Chirps"},
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "ChirpRainTweets",                 readableName = "#Rainfall Chirps"},
-                    //new OptionsCheckbox() {defaultValue = true, uniqueName = "SimulatePollution",               readableName = "Simulate Pollution"},
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "PreventRainBeforeMilestone",      readableName = "Prevent Rain Before Milestone"},
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "AutomaticPipeLaterals",           readableName = "Automatic Pipe Laterals" },
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "OnlyFloodOwnedtiles",             readableName = "Unowned Tiles Do Not Flood"},
@@ -36,6 +35,7 @@ namespace Rainfall
                     new OptionsSlider()   {defaultValue = 120f,  uniqueName = "FreezeLandvaluesTimer",           readableName = "Prev. Upgrade Add. Time",   units = " min",     tooltipFormat = "F0",     max = 600f,   step = 60f, tooltipMultiplier = 1f/60f},
                     new OptionsSlider()   {defaultValue = 180f,  uniqueName = "BreakBetweenStorms",              readableName = "Min. time btw. storms",     units = " min",     tooltipFormat = "F0",     max = 3600f,  step = 60f, tooltipMultiplier = 1f/60f},
                     new OptionsSlider()   {defaultValue = 3600f, uniqueName = "MaxTimeBetweenStorms",            readableName = "Max. time btw. storms",     units = " min",     tooltipFormat = "F0",     max = 3600f,  step = 60f, tooltipMultiplier = 1f/60f},
+                    //new OptionsCheckbox() {defaultValue = true,  uniqueName = "SimulatePollution",               readableName = "Simulate Pollution"},
 
                 }
             },
@@ -53,7 +53,7 @@ namespace Rainfall
                     new OptionsButton()   {                     uniqueName = "ApplyGridOption",                 readableName = "Apply Simulation Tiles Choice",                                                             onButtonClicked = DrainageAreaGrid.Clear},
                     new OptionsSlider()   {defaultValue = 0.2f, uniqueName = "UndevelopedRunoffCoefficient",    readableName = "Vacant Runoff Coeff.",                 tooltipFormat = "F2",     max = 1f,    step = 0.05f},
                     new OptionsSlider()   {defaultValue = 0.5f, uniqueName = "DefaultRunoffCoefficient",        readableName = "Default Runoff Coeff.",                 tooltipFormat = "F2",     max = 1f,    step = 0.05f},
-
+                    new OptionsSlider()   {defaultValue = 1.0f, uniqueName = "FloodSpawnerScalar",              readableName = "Flood Spawner Scalar",                  units = " X", tooltipFormat = "F1", min = 0.1f, max = 10f, step = 0.1f}
                 }
             },
             {
@@ -327,6 +327,7 @@ namespace Rainfall
             { typeof(MonorailTrackAI),      "Monorail"},
             { typeof(AirportAreaTaxiwayAI), "Taxiway"},
             { typeof(AirportAreaRunwayAI),  "Runway"},
+            { typeof(PedestrianZoneRoadAI), "Pathway" }
         };
         public static Dictionary<Type, string> PublicBuildingAICatalog = new Dictionary<Type, string>()
         {
@@ -359,7 +360,11 @@ namespace Rainfall
             {typeof(HelicopterDepotAI),             "EmergencyServices" },
             {typeof(ShelterAI),                     "EmergencyServices" },
             {typeof(ParkBuildingAI),                "ParksAndPlaza" },
-            {typeof(AuxiliaryBuildingAI),           "IndustryGeneral"}        
+            {typeof(AuxiliaryBuildingAI),           "IndustryGeneral"},
+            {typeof(AirportBuildingAI),             "Transport" },
+            {typeof(AirportAuxBuildingAI),          "Transport" },
+            {typeof(AirportEntranceAI),             "Transport" },
+            {typeof(AirportGateAI),                 "Transport" },
         };
         public static List<Type> PublicBuildingAISpecialCatalog = new List<Type>()
         {

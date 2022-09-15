@@ -9,7 +9,7 @@ using HarmonyLib;
 namespace Rainfall
 {
     [HarmonyPatch(typeof(MetroTrackBaseAI), nameof(MetroTrackBaseAI.SimulationStep), new Type[] { typeof(ushort), typeof(NetSegment)}, new ArgumentType[] { ArgumentType.Normal, ArgumentType.Ref } )]
-    class c
+    class MetroTrackBaseAIPatch
     {
         [HarmonyPostfix]
         static void Postfix(ushort segmentID, ref NetSegment data, ref MetroTrackBaseAI __instance)
@@ -17,7 +17,7 @@ namespace Rainfall
             bool logging = false;
             bool timerLogging = false; 
             NetManager instance = Singleton<NetManager>.instance;
-            Notification.Problem problem = Notification.RemoveProblems(data.m_problems, Notification.Problem.Flood);
+            Notification.Problem1 problem = Notification.RemoveProblems(data.m_problems, Notification.Problem1.Flood);
             if (logging)
                 Debug.Log("[RF]MetroTrackBaseAIPatch Patched!");
             
@@ -73,7 +73,7 @@ namespace Rainfall
                     if (timerLogging)
                         Debug.Log("[RF]MetroTrackBaseAI Flooded");
                     data.m_flags |= NetSegment.Flags.Flooded;
-                    problem = Notification.AddProblems(problem, Notification.Problem.Flood | Notification.Problem.MajorProblem);
+                    problem = Notification.AddProblems(problem, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                 }
                 else 
                 {
@@ -85,7 +85,7 @@ namespace Rainfall
                         if (timerLogging)
                         Debug.Log("[RF]MetroTrackBaseAI Flood");
                         flag = true;
-                        problem = Notification.AddProblems(problem, Notification.Problem.Flood);
+                        problem = Notification.AddProblems(problem, Notification.Problem1.Flood);
                     } else if (num7 < vector.y + MetroTrackFloodingTolerance  && FloodingTimers.instance.getSegmentFloodingElapsedTime(segmentID) != -1f)
                     {
                         FloodingTimers.instance.resetSegmentFloodingStartTime(segmentID);
