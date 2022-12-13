@@ -65,8 +65,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.06";
-        private readonly string buildTimestamp = "2022.09.14 2:58pm";
+        private readonly string versionNumber = "V2.07";
+        private readonly string buildTimestamp = "2022.12.10 4:06pm";
 
         private int initialTileCount = 0;
 
@@ -189,7 +189,7 @@ namespace Rainfall
             if (!initialized && Hydraulics.instance.initialized == true)
             {
                 InitializeManagers();
-
+                if (!WaterSourceManager.AreYouAwake())  WaterSourceManager.Awake();
                 _preRainfallLandvalues = new int[_capacity];
                 _capacity = _buildingManager.m_buildings.m_buffer.Length;
                 terminated = false;
@@ -229,7 +229,7 @@ namespace Rainfall
                     eightyOneTilesDelay = 0f;
                 }
                 return;
-            } else if (!DrainageAreaGrid.areYouAwake())
+            } else if (!DrainageAreaGrid.areYouAwake() && WaterSourceManager.AreYouAwake())
             {
                 purgePreviousWaterSources();
                 DrainageAreaGrid.Awake();

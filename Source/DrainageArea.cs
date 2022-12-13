@@ -219,8 +219,12 @@ namespace Rainfall
 							{
 
 								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("SelfSufficientResidential");
-							}
-						}
+                            }
+                            else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.ResidentialWallToWall)
+                            {
+                                currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("WallToWall");
+                            }
+                        }
 						else if (ai is ResidentialBuildingAI && (currentBuilding.m_flags & Building.Flags.HighDensity) != Building.Flags.None)
 						{
 
@@ -229,8 +233,12 @@ namespace Rainfall
 							{
 
 								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("SelfSufficientResidential");
-							}
-						}
+                            }
+                            else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.ResidentialWallToWall)
+                            {
+                                currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("WallToWall");
+                            }
+                        }
 						else if (ai is CommercialBuildingAI && (currentBuilding.m_flags & Building.Flags.HighDensity) == Building.Flags.None)
 						{
 
@@ -255,43 +263,47 @@ namespace Rainfall
 							currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("HighDensityCommercial");
 							if (currentBuilding.Info.GetSubService() == ItemClass.SubService.CommercialTourist)
 							{
-								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("TouristCommerical");
+								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("TouristCommercial");
 							}
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.CommercialLeisure)
 							{
-								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("LeisureCommerical");
+								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("TouristCommercial");
 							}
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.CommercialEco)
 							{
 								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("OrganicCommerical");
-							}
-						}
+                            }
+                            else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.CommercialWallToWall)
+                            {
+                                currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("WallToWall");
+                            }
+                        }
 						else if (ai is IndustrialBuildingAI)
 						{
 
 							if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialFarming)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryAgriculture");
-                            }
+							}
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialForestry)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryForest");
-                            }
+							}
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialOre)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOre");
-                                currentBuildingPollution = true;
-                            }
+								currentBuildingPollution = true;
+							}
 							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.IndustrialOil)
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryOil");
-                                currentBuildingPollution = true;
-                            }
+								currentBuildingPollution = true;
+							}
 							else
 							{
 								currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting("IndustryGeneral");
-                                currentBuildingPollution = true;
-                            }
+								currentBuildingPollution = true;
+							}
 						}
 						else if (ai is OfficeBuildingAI)
 						{
@@ -299,6 +311,13 @@ namespace Rainfall
 							if (currentBuilding.Info.GetSubService() == ItemClass.SubService.OfficeHightech)
 							{
 								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("HighTechOffice");
+							}
+							else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.OfficeFinancial)
+							{
+								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("FinancialOffice");
+							} else if (currentBuilding.Info.GetSubService() == ItemClass.SubService.OfficeWallToWall)
+							{
+								currentBuildingRunoffCoefficient += OptionHandler.getSliderSetting("WallToWall");
 							}
 						}
 						else
@@ -649,10 +668,26 @@ namespace Rainfall
 			newWaterSource.m_target = (ushort)Mathf.Clamp(this.m_outputPosition.y, 0, 65535);
 			newWaterSource.m_flow = 0;
 			ushort newWaterSourceID;
-			if (Singleton<WaterSimulation>.instance.CreateWaterSource(out newWaterSourceID, newWaterSource))
+			bool logging = false;
+			int count = 0;
+			do
 			{
-				return newWaterSourceID;
-			}
+				if (Singleton<WaterSimulation>.instance.CreateWaterSource(out newWaterSourceID, newWaterSource))
+				{
+					if (WaterSourceManager.AreYouAwake())
+					{
+						WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(newWaterSourceID);
+						if (currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined || currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Empty)
+						{
+							WaterSourceManager.SetWaterSourceEntry(newWaterSourceID, new WaterSourceEntry(DrainageAreaID));
+							if (logging) Debug.Log("[RF]DrainageArea.GenerateEmptyWaterSource SetWaterSourceEntry for DrainageAreaID " + DrainageAreaID.ToString() + " since WSM says WaterSource " + newWaterSourceID.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+							
+							return newWaterSourceID;
+						}
+					}
+				}
+				count++;
+			} while (count > 65535);
 			return 0;
 		}
 

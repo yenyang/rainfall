@@ -51,16 +51,19 @@ namespace Rainfall
             radius2 = 0f;
         }
 
-        public override void GetImmaterialResourceRadius(ushort buildingID, ref Building data, out ImmaterialResourceManager.Resource resource1, out float radius1, out ImmaterialResourceManager.Resource resource2, out float radius2)
+        public override ImmaterialResourceManager.ResourceData[] GetImmaterialResourceRadius(ushort buildingID, ref Building data)
         {
-           
-            resource1 = ImmaterialResourceManager.Resource.None;
-            radius1 = 0f;
-            resource2 = ImmaterialResourceManager.Resource.None;
-            radius2 = 0f;
+            return new ImmaterialResourceManager.ResourceData[1]
+            {
+            new ImmaterialResourceManager.ResourceData
+            {
+                m_resource = ImmaterialResourceManager.Resource.None,
+                m_radius = 0f,
+            }
+            };
         }
 
-        public override Color GetColor(ushort buildingID, ref Building data, InfoManager.InfoMode infoMode)
+        public override Color GetColor(ushort buildingID, ref Building data, InfoManager.InfoMode infoMode, InfoManager.SubInfoMode subInfoMode)
         {
             if (infoMode == InfoManager.InfoMode.Water)
             {
@@ -76,7 +79,7 @@ namespace Rainfall
                     return Color.gray;
                 }
             
-                return base.GetColor(buildingID, ref data, infoMode);
+                return base.GetColor(buildingID, ref data, infoMode, subInfoMode);
             }
             else
             {
@@ -91,10 +94,10 @@ namespace Rainfall
                 }
                 if (infoMode != InfoManager.InfoMode.Pollution)
                 {
-                    return base.GetColor(buildingID, ref data, infoMode);
+                    return base.GetColor(buildingID, ref data, infoMode, subInfoMode);
                 }
             
-                return base.GetColor(buildingID, ref data, infoMode);
+                return base.GetColor(buildingID, ref data, infoMode, subInfoMode);
             }
         }
 
