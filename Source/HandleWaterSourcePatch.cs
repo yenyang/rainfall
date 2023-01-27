@@ -10,6 +10,7 @@ namespace Rainfall
         static bool Prefix(ushort buildingID, ref Building data, bool output, int pollution, int rate, int max, float radius)
         {
             bool logging = false;
+            //if (data.Info.m_buildingAI is StormDrainAI) return true;
             if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Prefix Hello!");
             if (WaterSourceManager.AreYouAwake())
             {
@@ -34,6 +35,7 @@ namespace Rainfall
         static void Postfix(ushort buildingID, ref Building data, bool output, int pollution, int rate, int max, float radius)
         {
             bool logging = false;
+            //if (data.Info.m_buildingAI is StormDrainAI) return;
             if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix Hello!");
 
             if (WaterSourceManager.AreYouAwake())

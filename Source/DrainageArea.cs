@@ -124,6 +124,8 @@ namespace Rainfall
 			if (buildingSubbasin.PollutionRatio > 0f) m_pollution = buildingSubbasin.ContributingArea * buildingSubbasin.PollutionRatio / basinArea;
 			else m_pollution = 0f;
 
+			if (logging) Debug.Log("[RF]DrainageArea.calculateCompositeRunoffCoefficient m_pollution = " + m_pollution.ToString());
+
 			float improvedSubbasinArea = buildingSubbasin.ContributingArea + segmentSubbasin.ContributingArea;
 			if (improvedSubbasinArea < basinArea) {
 				unimprovedSubbasin.ContributingArea = basinArea - improvedSubbasinArea;
@@ -181,6 +183,24 @@ namespace Rainfall
 					{
 						string aiString = OptionHandler.PublicBuildingAICatalog[ai.GetType()];
 						currentBuildingRunoffCoefficient = OptionHandler.getSliderSetting(aiString);
+						if (currentBuilding.Info.m_buildingAI is PowerPlantAI)
+						{
+							PowerPlantAI currentBuildingPowerPlantAI = ai as PowerPlantAI;
+							if (currentBuildingPowerPlantAI.m_pollutionRadius > 0f && currentBuildingPowerPlantAI.m_isRenewable == false)
+							{
+								currentBuildingPollution = true;
+							}
+						} else if (currentBuilding.Info.m_buildingAI is LandfillSiteAI)
+						{
+							Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuilding.Info.m_buildingAI is LandfillSiteAI");
+							LandfillSiteAI currentBuildingLandfillSiteAI = ai as LandfillSiteAI;
+							if (currentBuildingLandfillSiteAI.m_pollutionRadius > 0f)
+							{
+								currentBuildingPollution = true;
+                                Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuildingPollution = true");
+                            }
+							
+						}
 					}
 					else if (OptionHandler.PublicBuildingAISpecialCatalog.Contains(ai.GetType()))
 					{
@@ -371,7 +391,9 @@ namespace Rainfall
 				buildingSubbasin.ContributingArea = totalArea;
 				buildingSubbasin.RunoffCoefficient = cummulativeImperviousArea / totalArea;
 				buildingSubbasin.PollutionRatio = cummulativePollutionArea / totalArea;
-			}
+                if (logging == true) Debug.Log("[RF]DrainageArea.calculateBuildingImperviousArea cummulativePollutionArea = " + cummulativePollutionArea);
+                if (logging == true) Debug.Log("[RF]DrainageArea.calculateBuildingImperviousArea buildingSubbasin.PollutionRatio = " + buildingSubbasin.PollutionRatio);
+            }
 			if (logging == true) Debug.Log("[RF]DrainageArea.calculateBuildingImperviousArea buildingSubbasin.POC.y = " + buildingSubbasin.PointOfConcentration.y);
 			return buildingSubbasin;
         }

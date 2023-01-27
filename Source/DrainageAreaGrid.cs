@@ -600,7 +600,8 @@ namespace Rainfall
             }
             foreach (DrainageArea currentDrainageArea in DrainageAreaDictionary.Values)
             {
-                currentDrainageArea.recalculateCompositeRunoffCoefficent(false);
+                bool logging = false;
+                currentDrainageArea.recalculateCompositeRunoffCoefficent(logging);
             }
             Debug.Log("[RF]DrainageAreaGrid.RecalculateCoefficientsForAllDrainageAreas Finished!");
         }

@@ -1248,14 +1248,34 @@ namespace Rainfall
                             {
                                 Debug.Log("[RF]StormDrainAI.HandleWaterSource Handling water source with no intake or outlet???");
                             }
-                            if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
 
                         }
-                        else
+                        else 
                         {
-                            if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
-                            data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
 
+                            if (this.m_stormWaterIntake > 0)
+                            {
+                                if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.StormDrainInletFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                                {
+                                    if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                                    data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+
+                                }
+                            }
+                            else if (this.m_stormWaterOutlet > 0)
+                            {
+                                if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.StormDrainOutletFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                                {
+                                    if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                                    data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+
+                                }
+                            }
+                            else
+                            {
+                                Debug.Log("[RF]StormDrainAI.HandleWaterSource Handling water source with no intake or outlet???");
+                            }
                         }
                     }
                 }
@@ -1417,14 +1437,33 @@ namespace Rainfall
                         {
                             Debug.Log("[RF]StormDrainAI.HandleWaterSource Handling water source with no intake or outlet???");
                         }
-                        if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                        if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
 
                     }
                     else
                     {
-                        if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
-                        data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+                        if (this.m_stormWaterIntake > 0)
+                        {
+                            if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.StormDrainInletFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                            {
+                                if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                                data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
 
+                            }
+                        }
+                        else if (this.m_stormWaterOutlet > 0)
+                        {
+                            if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.StormDrainOutletFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                            {
+                                if (logging) Debug.Log("[RF]StormDrainAI.HandleWaterSource Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                                data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+
+                            }
+                        }
+                        else
+                        {
+                            Debug.Log("[RF]StormDrainAI.HandleWaterSource Handling water source with no intake or outlet???");
+                        }
                     }
                 }
             }

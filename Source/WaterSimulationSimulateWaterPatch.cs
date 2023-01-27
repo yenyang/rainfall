@@ -22,12 +22,11 @@ namespace Rainfall
                 float currentOutputRate = 0f;
                 ushort currentWaterSourceID = 0;
 
-                float currentPollutantRate = 0f;// Mathf.Clamp(currentDrainageArea.Value.m_pollution, 0f, 1f);
-                //if (!OptionHandler.getCheckboxSetting("SimulatePollution")) currentPollutantRate = 0f;
+                float currentPollutantRate = Mathf.Clamp(currentDrainageArea.Value.m_pollution, 0f, 1f); 
+                if (!OptionHandler.getCheckboxSetting("SimulatePollution")) currentPollutantRate = 0f;
                 bool logging = false;
-                if (logging) Debug.Log("[RF].WaterSimulation.SimulateWaterPrefix currentPollutantRate = " + currentPollutantRate.ToString());
-                
                 if (currentDrainageArea.Value.m_enabled == false) continue;
+                if (logging) Debug.Log("[RF].WaterSimulation.SimulateWaterPrefix currentPollutantRate = " + currentPollutantRate.ToString());
                 if (Singleton<WeatherManager>.instance.m_currentRain == 0)
                 {
                     if (currentDrainageArea.Value.m_outputRate > 0)
@@ -44,7 +43,7 @@ namespace Rainfall
                             currentWaterSource.m_target = Math.Min((ushort)65535, (ushort)(Mathf.CeilToInt(currentDrainageArea.Value.m_outputPosition.y * 64f) + 100));
                             currentWaterSource.m_inputRate = 0u;
                             currentWaterSource.m_outputRate = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentOutputRate));
-                            currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate* currentOutputRate));
+                            currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate* 65535u));
                             if (logging) Debug.Log("[RF].WaterSimulation.SimulateWaterPrefix currentWaterSource.m_pollution = " + currentWaterSource.m_pollution.ToString());
 
                             currentWaterSource.m_water = 65535u;
@@ -67,7 +66,7 @@ namespace Rainfall
                                 currentWaterSource.m_target = Math.Min((ushort)65535, (ushort)(Mathf.CeilToInt(currentDrainageArea.Value.m_outputPosition.y * 64f) + 100));
                                 currentWaterSource.m_inputRate = 0u;
                                 currentWaterSource.m_outputRate = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentOutputRate));
-                                currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate * currentOutputRate));
+                                currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate * 65535u));
                                 if (logging) Debug.Log("[RF].WaterSimulation.SimulateWaterPrefix currentWaterSource.m_pollution = " + currentWaterSource.m_pollution.ToString());
 
                                 currentWaterSource.m_water = 65535u;
@@ -83,7 +82,8 @@ namespace Rainfall
                     if (Mathf.Abs(Singleton<TerrainManager>.instance.SampleRawHeightSmooth(currentDrainageArea.Value.m_outputPosition) - currentDrainageArea.Value.m_outputPosition.y) > 0f)
                     {
                         //Debug.Log("[RF]WaterSimulationSimulateWaterPatch Thinks terrain has been altered near drainage area " + currentDrainageArea.Key.ToString());
-                        currentDrainageArea.Value.recalculateCompositeRunoffCoefficent(false);
+                        
+                        currentDrainageArea.Value.recalculateCompositeRunoffCoefficent(logging);
                     }
                 }
                 if (Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size > 65000) continue;
@@ -111,7 +111,7 @@ namespace Rainfall
                     currentWaterSource.m_target = Math.Min((ushort)65535, (ushort)(Mathf.CeilToInt(currentDrainageArea.Value.m_outputPosition.y * 64f) + 100));
                     currentWaterSource.m_inputRate = 0u;
                     currentWaterSource.m_outputRate = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentOutputRate));
-                    currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate * currentOutputRate));
+                    currentWaterSource.m_pollution = Math.Min((ushort)65535, (ushort)Mathf.CeilToInt(currentPollutantRate * 65535u));
                     if (logging) Debug.Log("[RF].WaterSimulation.SimulateWaterPrefix currentWaterSource.m_pollution = " + currentWaterSource.m_pollution.ToString());
 
                     currentWaterSource.m_water = 65535u;
