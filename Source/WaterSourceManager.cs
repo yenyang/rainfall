@@ -14,6 +14,17 @@ namespace Rainfall
 
         private static WaterSourceEntry[] m_buffer = new WaterSourceEntry[waterSourceLimit];
 
+        public static readonly Dictionary<WaterSourceEntry.WaterSourceType, Color> WaterSourceColors = new Dictionary<WaterSourceEntry.WaterSourceType, Color>()
+        {
+            {WaterSourceEntry.WaterSourceType.DamPowerHouseFacility, new Color(1f, 1f, 0f, 1f)},
+            {WaterSourceEntry.WaterSourceType.SewerFacility, new Color(0f, 0.8f, 0.4f, 1f) },
+            {WaterSourceEntry.WaterSourceType.StormDrainInletFacility, new Color(0.4f, 0f, 0.4f, 1f)},
+            {WaterSourceEntry.WaterSourceType.StormDrainOutletFacility, new Color(1.0f, 0.0f, 0.0f, 1f) },
+            {WaterSourceEntry.WaterSourceType.WaterCleaner, new Color(.4f, 1f, 1f, 1f) },
+            {WaterSourceEntry.WaterSourceType.WaterFacility, new Color(0f, 0f, 0.6f, 1f) },
+            {WaterSourceEntry.WaterSourceType.WaterTruck, new Color(1f, 0.5f, 0f, 1f) }
+        };
+
         private static int m_entryCount = 0;
         public static void Awake()
         {
@@ -181,7 +192,7 @@ namespace Rainfall
                     else if (currentBuildingAI is WaterFacilityAI)
                     {
                         WaterFacilityAI currentWaterFacilityAI = currentBuildingAI as WaterFacilityAI;
-                        if (currentWaterFacilityAI.m_waterIntake > 0 || currentWaterFacilityAI.m_waterOutlet > 0)
+                        if (currentWaterFacilityAI.m_waterIntake > 0 || currentWaterFacilityAI.m_waterOutlet > 0 || currentWaterFacilityAI.m_waterStorage > 0)
                         {
                             if (m_buffer[waterSourceID].GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined)
                             {
@@ -212,28 +223,10 @@ namespace Rainfall
                     }
                     else if (currentBuildingAI is WaterCleanerAI)
                     {
-                        WaterCleanerAI waterCleanerAI = currentBuildingAI as WaterCleanerAI;
+                        //WaterCleanerAI waterCleanerAI = currentBuildingAI as WaterCleanerAI;
                         if (m_buffer[waterSourceID].GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined)
                         {
                             m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterCleaner, i);
-                            m_entryCount++;
-                        }
-                    }
-                }
-            }
-            for (ushort i = 0; i < Singleton<VehicleManager>.instance.m_vehicles.m_size; i++)
-            {
-                Vehicle currentVehicle = Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i];
-                ushort waterSourceID = currentVehicle.m_waterSource;
-                if (waterSourceID != 0)
-                {
-                    VehicleAI currentVehicleAI = currentVehicle.Info.m_vehicleAI;
-                    if (currentVehicleAI is WaterTruckAI)
-                    {
-                        WaterTruckAI waterTruckAI = currentVehicleAI as WaterTruckAI;
-                        if (m_buffer[waterSourceID].GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined)
-                        {
-                            m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterTruck, i);
                             m_entryCount++;
                         }
                     }
@@ -284,5 +277,7 @@ namespace Rainfall
                 Singleton<WaterSimulation>.instance.ReleaseWaterSource(waterSourceID);
             }
         }
+
+        
     }
 }

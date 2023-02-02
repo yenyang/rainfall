@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
 using System.Threading;
+using ColossalFramework.UI;
 
 namespace Rainfall
 {
@@ -62,11 +63,12 @@ namespace Rainfall
         private SortedList<float, string> intensityAdjectives;
         private List<string> beforeReturnRateStatements;
         private List<string> closingStatements;
+        private bool ReleaseNextClickedWaterSource = false;
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.09";
-        private readonly string buildTimestamp = "2023.01.27 4:30 pm";
+        private readonly string versionNumber = "V2.10";
+        private readonly string buildTimestamp = "2023.02.01 3:45 pm";
 
         private int initialTileCount = 0;
 
@@ -151,6 +153,8 @@ namespace Rainfall
             {
                 _weatherManager.m_currentRain = Mathf.Max(_weatherManager.m_targetRain, _weatherManager.m_currentRain + 0.0002f - OptionHandler.getSliderSetting("IntensityRateOfChange"));
             }
+
+            
             
             base.OnBeforeSimulationTick();
 
@@ -419,6 +423,8 @@ namespace Rainfall
                 _realTimeCountSinceLastStorm = 0f;
                 holdLandValue = true;
             }
+
+                        
             base.OnUpdate(realTimeDelta, simulationTimeDelta);
         }
         
@@ -813,30 +819,11 @@ namespace Rainfall
             for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size; i++)
             {
                 WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
-                if (ws.m_inputRate == 0u && ws.m_type == 2 && Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
+                if (ws.m_type > 1)
                 {
 
                     previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                }/*
-                else
-                {
-                    Debug.Log("[RF]Purgewatersources Didn't Purge Watersource " + i.ToString());
-                    Debug.Log("[RF]PurgeWaterSources inputRate = " + ws.m_inputRate.ToString());
-                    Debug.Log("[RF]PurgeWaterSources m_type = " + ws.m_type.ToString());
-                    Debug.Log("[RF]PurgeWaterSources Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1) is " + Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)).ToString());
-                    int DAGridX = DrainageAreaGrid.CheckDrainageAreaGridX(ws.m_outputPosition);
-                    int DAGridZ = DrainageAreaGrid.CheckDrainageAreaGridZ(ws.m_outputPosition);
-                    int DAGridID = DAGridZ * DrainageAreaGrid.drainageAreaGridCoefficient + DAGridX;
-                    Debug.Log("[RF]PurgeWaterSources DAGridID = " + DAGridID.ToString());
-                    if (DrainageAreaGrid.DrainageAreaDictionary.ContainsKey(DAGridID))
-                    {
-                        if (DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.x == ws.m_outputPosition.x && DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.z == ws.m_outputPosition.z)
-                        {
-                            Debug.Log("[RF]PurgeWaterSources DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition == ws.m_outputPosition");
-                            previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                        }
-                    }
-                }*/
+                }
             }
             for (int i=0; i<Singleton<BuildingManager>.instance.m_buildings.m_buffer.Length; i++)
             {
@@ -845,6 +832,15 @@ namespace Rainfall
                     Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
                     previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
                     Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource = 0;
+                }
+            }
+            for (int i = 0; i < Singleton<VehicleManager>.instance.m_vehicles.m_buffer.Length; i++)
+            {
+                if (previousStormWaterSourceIDs.Contains(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource))
+                {
+                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource);
+                    previousStormWaterSourceIDs.Remove(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource);
+                    Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource = 0;
                 }
             }
             if (previousStormWaterSourceIDs.Count > 0)

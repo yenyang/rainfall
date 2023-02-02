@@ -171,8 +171,9 @@ namespace Rainfall
                 {
                     new OptionsButton() {uniqueName = "EndStorm",                        readableName = "End Storm",                    onButtonClicked = Hydrology.EndStorm},
                     new OptionsButton() {uniqueName = "DeleteAllAssets",                 readableName = "Delete All Assets",            onButtonClicked = Hydraulics.deleteAllAssets},
+                    //new OptionsButton() {uniqueName = "ReleaseWaterSource",              readableName = "Release Next Clicked Water Source", onButtonClicked = },
                     new OptionsButton() {uniqueName = "PurgeWaterSources",               readableName = "Purge RF Water Sources",       onButtonClicked = Hydrology.purgePreviousWaterSources},
-                    new OptionsButton() {uniqueName = "PurgeFacilityWaterSources",       readableName = "Purge Facility Water Sources", onButtonClicked = Hydrology.PurgeFacilityWaterSources},
+                    new OptionsButton() {uniqueName = "PurgeFacilityWaterSources",       readableName = "Purge Water Sources",          onButtonClicked = Hydrology.PurgeFacilityWaterSources},
                     new OptionsButton() {uniqueName = "Terminate",                       readableName = "Terminate",                    onButtonClicked = Hydrology.Terminate},
                 }
             }
