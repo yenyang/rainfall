@@ -1282,7 +1282,7 @@ namespace Rainfall
             {
                 if (outletBuilding.m_waterSource != 0 && outletBuildingAI.m_stormWaterOutlet > 0)
                 {
-                    //simulatePollution = true;
+                    simulatePollution = true;
                     outletWaterSource = Hydraulics.instance._waterSimulation.LockWaterSource(outletBuilding.m_waterSource);
                     outletWaterSource.m_pollution = 0;
                 } 

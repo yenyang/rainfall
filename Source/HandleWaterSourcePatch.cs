@@ -17,12 +17,24 @@ namespace Rainfall
                if (data.m_waterSource != 0)
                 {
                     WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(data.m_waterSource);
+                    WaterFacilityAI currentWaterFacilityAI = data.Info.m_buildingAI as WaterFacilityAI;
                     if (currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined || currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Empty)
                     {
-                        WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterFacility, buildingID));
+                        if (currentWaterFacilityAI.m_waterIntake > 0 || currentWaterFacilityAI.m_waterOutlet > 0)
+                        {
+                            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterFacility, buildingID));
+                        } else if (currentWaterFacilityAI.m_sewageOutlet > 0)
+                        {
+                            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.SewerFacility, buildingID));
+                        } else
+                        {
+                            Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Prefix Error With WaterSourceID " + data.m_waterSource.ToString() + " WaterFacilityAI BuldingID = " + buildingID.ToString() + " Neither an inlet or outlet.");
+
+                        }
+
                         if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Prefix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
 
-                    } else if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.WaterFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                    } else if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.WaterFacility && currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.SewerFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
                     {
                         /*if (logging)*/ Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Prefix Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                         data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
@@ -43,12 +55,26 @@ namespace Rainfall
                 if (data.m_waterSource != 0)
                 {
                     WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(data.m_waterSource);
+                    WaterFacilityAI currentWaterFacilityAI = data.Info.m_buildingAI as WaterFacilityAI;
+
                     if (currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined || currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Empty)
                     {
-                        WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterFacility, buildingID));
+                        if (currentWaterFacilityAI.m_waterIntake > 0 || currentWaterFacilityAI.m_waterOutlet > 0)
+                        {
+                            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterFacility, buildingID));
+                        }
+                        else if (currentWaterFacilityAI.m_sewageOutlet > 0)
+                        {
+                            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.SewerFacility, buildingID));
+                        }
+                        else
+                        {
+                            Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Prefix Error With WaterSourceID " + data.m_waterSource.ToString() + " WaterFacilityAI BuldingID = " + buildingID.ToString() + " Neither an inlet or outlet.");
+
+                        }
                         if (logging) Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
 
-                    } else if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.WaterFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                    } else if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.WaterFacility && currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.SewerFacility || currentWaterSourceEntry.GetBuildingID() != buildingID)
                     {
 
                         /*if (logging)*/Debug.Log("[RF]WaterFacilityAIHandleWaterSourcePatch.Postfix Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
@@ -131,8 +157,8 @@ namespace Rainfall
                     if (currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined || currentWaterSourceEntry.GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Empty)
                     {
                         WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterCleaner, buildingID));
-                        if (logging) Debug.Log("[RF]WaterCleanerAIHandleWaterSourcePatch.Postfix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
-
+                        if (logging) Debug.Log("[RF]WaterCleanerAIHandleWaterSourcePatch.Prefix SetWaterSourceEntry for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " and is " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()] + " WaterSourceEntry.buildingID = " + WaterSourceManager.GetWaterSourceEntry(data.m_waterSource).GetBuildingID().ToString());
+                        
                     }
                     else if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.WaterCleaner || currentWaterSourceEntry.GetBuildingID() != buildingID)
                     {

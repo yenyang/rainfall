@@ -192,12 +192,12 @@ namespace Rainfall
 							}
 						} else if (currentBuilding.Info.m_buildingAI is LandfillSiteAI)
 						{
-							Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuilding.Info.m_buildingAI is LandfillSiteAI");
+							//Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuilding.Info.m_buildingAI is LandfillSiteAI");
 							LandfillSiteAI currentBuildingLandfillSiteAI = ai as LandfillSiteAI;
 							if (currentBuildingLandfillSiteAI.m_pollutionRadius > 0f)
 							{
 								currentBuildingPollution = true;
-                                Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuildingPollution = true");
+                                //Debug.Log("[RF]DrainageArea.CalculateBuildingImperviousArea currentBuildingPollution = true");
                             }
 							
 						}
