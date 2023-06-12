@@ -67,8 +67,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.10";
-        private readonly string buildTimestamp = "2023.02.01 3:45 pm";
+        private readonly string versionNumber = "V2.12";
+        private readonly string buildTimestamp = "2023.06.11 12:25 am";
 
         private int initialTileCount = 0;
 
@@ -876,6 +876,9 @@ namespace Rainfall
                 Singleton<WeatherManager>.instance.m_currentFog = 0;
                 Singleton<WeatherManager>.instance.m_targetRain = OptionHandler.getSliderSetting("MakeItRainIntensity");
                 Hydrology.instance._realTimeCountSinceLastStorm = 3601f;
+            }
+            if (OptionHandler.getCheckboxSetting("PreventRainBeforeMilestone")) {
+                ChirpForecast.SendMessage("Failed to Make it Rain! because you have enabled the option to Prevent Rain Before Milestone 3.", "Make it Rain! Button");
             }
         }
         public static void Terminate()

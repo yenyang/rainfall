@@ -21,7 +21,7 @@ namespace Rainfall
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "AutomaticPipeLaterals",           readableName = "Automatic Pipe Laterals" },
                     new OptionsCheckbox() {defaultValue = true, uniqueName = "OnlyFloodOwnedtiles",             readableName = "Unowned Tiles Do Not Flood"},
                     new OptionsDropdown() {defaultValue = 3,    uniqueName = "StormDrainAssetControlOption",    readableName = "Storm Drain Asset Control",                                             options = new List<string>(){ "No Control", "District Control", "ID Control", "District Control with ID Override" }},
-                    new OptionsDropdown() {defaultValue = 2,    uniqueName = "GravityDrainageOption",           readableName = "Gravity Drainage Options",                                              options = new List<string>() { "Ignore Gravity", "Simplified (Alpha) Gravity", "Improved (Beta) Gravity" } },
+                    new OptionsDropdown() {defaultValue = 2,    uniqueName = "GravityDrainageOption",           readableName = "Gravity Drainage Options",                                              options = new List<string>() { "Ignore Gravity", "Simplified Gravity", "Advanced Gravity" } },
                     new OptionsSlider()   {defaultValue = 0f,   uniqueName = "IncreaseBuildingPadHeight",       readableName = "Increase Building Pads",                                                units = " units",   tooltipFormat = "F1"},
                     new OptionsSlider()   {defaultValue = 5f,   uniqueName = "InletRateMultiplier",             readableName = "Inlet Rate Multiplier",                                                units = "X",   tooltipFormat = "F1", min=0.2f,  max=20f, step=0.2f},
                     new OptionsSlider()   {defaultValue = 5f,   uniqueName = "OutletRateMultiplier",            readableName = "Outlet Rate Multiplier",                                                units = "X",   tooltipFormat = "F1", min=0.2f,  max=20f, step=0.2f},
@@ -369,6 +369,9 @@ namespace Rainfall
             {typeof(AirportAuxBuildingAI),          "Transport" },
             {typeof(AirportEntranceAI),             "Transport" },
             {typeof(AirportGateAI),                 "Transport" },
+            {typeof(HotelAI),                       "ParksAndPlaza"},
+            {typeof(MedicalCenterAI),               "Healthcare" },
+            {typeof(VarsitySportsArenaAI),          "Monuments" }
         };
         public static List<Type> PublicBuildingAISpecialCatalog = new List<Type>()
         {

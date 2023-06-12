@@ -906,13 +906,21 @@ namespace Rainfall
                     float SDfloodingDifferential = this.m_invert;
                     float SDfloodedDifferential = this.m_soffit;
                     int[] SDfloodingRateModifiers = new int[7] { 95, 90, 75, 50, 33, 25, 20 };
-                    if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
+                    if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false && FloodingTimers.instance.getBuildingFloodedElapsedTime(buildingID) == -1f)
+                    {
+                        FloodingTimers.instance.setBuildingFloodedStartTime(buildingID);
+                    } else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false && FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID) == -1f)
+                    {
+                        FloodingTimers.instance.setBuildingFloodingStartTime(buildingID);
+                    }
+                    else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodedDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false && FloodingTimers.instance.getBuildingFloodedElapsedTime(buildingID) >= OptionHandler.getSliderSetting("BuildingFloodedTimer") && OptionHandler.getCheckboxSetting("BuildingSufferFlooded"))
                     {
                         finalProductionRate = 20;
                         buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     }
-                    else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false)
+                    else if (SDwaterSurfaceElevation > buildingData.m_position.y + SDfloodingDifferential && OptionHandler.getDropdownSetting("GravityDrainageOption") == OptionHandler._ImprovedGravityDrainageOption && this.m_culvert == false && FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID) >= OptionHandler.getSliderSetting("BuildingFloodingTimer") && OptionHandler.getCheckboxSetting("BuildingSufferFlooding"))
                     {
+                        FloodingTimers.instance.resetBuildingFloodedStartTime(buildingID);
                         if ((int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) >= 0 && (int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential) < 7)
                         {
                             finalProductionRate = SDfloodingRateModifiers[(int)(SDwaterSurfaceElevation - buildingData.m_position.y - SDfloodingDifferential)];
@@ -924,8 +932,12 @@ namespace Rainfall
                         }
                         buildingData.m_problems = Notification.AddProblems(buildingData.m_problems, Notification.Problem1.Flood);
                     }
-                    else
+                    else if (SDwaterSurfaceElevation <= buildingData.m_position.y + SDfloodingDifferential)
                     {
+                        Debug.Log("[RF]StormdrainAI " + FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID).ToString());
+                        FloodingTimers.instance.resetBuildingFloodedStartTime(buildingID);
+                        FloodingTimers.instance.resetBuildingFloodingStartTime(buildingID);
+                        Debug.Log("[RF]StormdrainAI " + FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID).ToString());
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood);
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     }
