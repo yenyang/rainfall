@@ -172,7 +172,7 @@ namespace Rainfall
             {
                 return;
             }
-            bool logging = true;
+            bool logging = false;
             if (WaterSourceManager.AreYouAwake())
             {
                 if (buildingData.m_waterSource != 0)
@@ -301,7 +301,7 @@ namespace Rainfall
             {
                 return false;
             }
-            bool logging = true;
+            bool logging = false;
             if (WaterSourceManager.AreYouAwake())
             {
                 if (data.m_waterSource != 0)
@@ -353,7 +353,7 @@ namespace Rainfall
             {
                 return false;
             }
-            bool logging = true;
+            bool logging = false;
             if (WaterSourceManager.AreYouAwake())
             {
                 if (data.m_waterSource != 0)

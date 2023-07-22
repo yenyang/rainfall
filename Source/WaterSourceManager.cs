@@ -234,7 +234,7 @@ namespace Rainfall
                     }
                     else if (currentBuildingAI is NaturalDrainageAI)
                     {
-                        bool logging = true;
+                        bool logging = false;
                         NaturalDrainageAI currentNaturalDrainageAI = currentBuildingAI as NaturalDrainageAI;
                         if (currentNaturalDrainageAI.m_standingWaterDepth > 0f)
                         {

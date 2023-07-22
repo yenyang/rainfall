@@ -1787,20 +1787,13 @@ namespace Rainfall
                     int id;
                     for (id = 0; id < _capacity; id++)
                     {
-                        if ((_buildingManager.m_buildings.m_buffer[id].m_flags & Building.Flags.Created) == Building.Flags.None || (_buildingManager.m_buildings.m_buffer[id].m_flags & Building.Flags.Untouchable) != Building.Flags.None || (_buildingManager.m_buildings.m_buffer[id].m_flags & Building.Flags.BurnedDown) != Building.Flags.None || (_buildingManager.m_buildings.m_buffer[id].m_flags & Building.Flags.Demolishing) != Building.Flags.None || (_buildingManager.m_buildings.m_buffer[id].m_flags & Building.Flags.Deleted) != Building.Flags.None)
+                        BuildingAI ai = _buildingManager.m_buildings.m_buffer[id].Info.m_buildingAI;
+                        if (ai is NaturalDrainageAI || ai is StormDrainAI)
                         {
-                            // Debug.Log("[RF].Hydrology  Failed Flag Test: " + _buildingManager.m_buildings.m_buffer[id].m_flags.ToString());
-
+                            // Debug.Log("[RF].Hydrology  Failed AI Test: " + ai.ToString());
+                            _buildingManager.ReleaseBuilding((ushort)id);
                         }
-                        else
-                        {
-                            BuildingAI ai = _buildingManager.m_buildings.m_buffer[id].Info.m_buildingAI;
-                            if (ai is NaturalDrainageAI || ai is StormDrainAI)
-                            {
-                                // Debug.Log("[RF].Hydrology  Failed AI Test: " + ai.ToString());
-                                _buildingManager.ReleaseBuilding((ushort)id);
-                            }
-                        }
+                        
                     }
                 }
                 catch (Exception e)
