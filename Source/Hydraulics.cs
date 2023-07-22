@@ -1894,6 +1894,10 @@ namespace Rainfall
         {
             Hydraulics.instance.halted = true;
         }
+        public static void RestartAllRFAssets()
+        {
+            Hydraulics.instance.halted = false;
+        }
         /*
         public static string generateCulvertName(ushort id, bool upstream)
         {

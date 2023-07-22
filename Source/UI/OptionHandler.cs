@@ -36,7 +36,8 @@ namespace Rainfall
                     new OptionsSlider()   {defaultValue = 180f,  uniqueName = "BreakBetweenStorms",              readableName = "Min. time btw. storms",     units = " min",     tooltipFormat = "F0",     max = 3600f,  step = 60f, tooltipMultiplier = 1f/60f},
                     new OptionsSlider()   {defaultValue = 3600f, uniqueName = "MaxTimeBetweenStorms",            readableName = "Max. time btw. storms",     units = " min",     tooltipFormat = "F0",     max = 3600f,  step = 60f, tooltipMultiplier = 1f/60f},
                     new OptionsCheckbox() {defaultValue = true,  uniqueName = "SimulatePollution",               readableName = "Simulate Pollution"},
-
+                    new OptionsButton() {uniqueName = "RestartAllAssets",                                        readableName = "Un-Halt All RF Assets",        onButtonClicked= Hydraulics.RestartAllRFAssets},
+                    new OptionsButton() {uniqueName = "Reinstate",                                               readableName = "Un-Terminate RF",              onButtonClicked = Hydrology.Reinstate},
                 }
             },
             {
@@ -170,12 +171,9 @@ namespace Rainfall
                 "RMV", new List<OptionsItemBase>
                 {
                     new OptionsButton() {uniqueName = "EndStorm",                        readableName = "End Storm",                    onButtonClicked = Hydrology.EndStorm},
-                    new OptionsButton() {uniqueName = "Halt All Assets",                 readableName = "Halt All RF Assets",           onButtonClicked= Hydraulics.HaltAllRFAssets},
+                    new OptionsButton() {uniqueName = "HaltAllAssets",                   readableName = "Halt All RF Assets",           onButtonClicked= Hydraulics.HaltAllRFAssets},
                     new OptionsButton() {uniqueName = "DeleteAllAssets",                 readableName = "Delete All RF Assets",         onButtonClicked = Hydraulics.deleteAllAssets},
-                    //new OptionsButton() {uniqueName = "ReleaseWaterSource",              readableName = "Release Next Clicked Water Source", onButtonClicked = },
-                    new OptionsButton() {uniqueName = "PurgeWaterSources",               readableName = "Purge RF Water Sources",       onButtonClicked = Hydrology.purgePreviousWaterSources},
-                    new OptionsButton() {uniqueName = "PurgeFacilityWaterSources",       readableName = "Purge Water Sources",          onButtonClicked = Hydrology.PurgeFacilityWaterSources},
-                    new OptionsButton() {uniqueName = "Terminate",                       readableName = "Terminate",                    onButtonClicked = Hydrology.Terminate},
+                    new OptionsButton() {uniqueName = "Terminate",                       readableName = "Terminate RF for Removal",     onButtonClicked = Hydrology.Terminate},
                 }
             }
         };

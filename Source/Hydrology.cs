@@ -67,8 +67,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.13.0.4";
-        private readonly string buildTimestamp = "2023.07.21 09:27 pm";
+        private readonly string versionNumber = "V2.13.0.7";
+        private readonly string buildTimestamp = "2023.07.22 09:06 am";
 
         private int initialTileCount = 0;
 
@@ -167,20 +167,9 @@ namespace Rainfall
             {
                 terminated = true;
             }
-            else if (terminated && OptionHandler.getSliderSetting("GlobalRunoffScalar") != 0 && purged)
-            {
-                terminated = false;
-                purged = false;
-            }
 
-            if (terminated && purged == true) //Previous checked to see if their were any water source IDs that needed to be removed. 
+            if (terminated)
             {
-                return;
-            }
-            else if (terminated) // see above comment
-            {
-                purgePreviousWaterSources();
-                purged = true;
                 return;
             }
 
@@ -772,35 +761,14 @@ namespace Rainfall
                 WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
                 if (ws.m_inputRate == 0u && ws.m_type == 2 && !Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)))
                 {
-
                     previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                } /*else
-                {
-                    Debug.Log("[RF]Purgewatersources Didn't Purge Watersource " + i.ToString());
-                    Debug.Log("[RF]PurgeWaterSources inputRate = " + ws.m_inputRate.ToString());
-                    Debug.Log("[RF]PurgeWaterSources m_type = " + ws.m_type.ToString());
-                    Debug.Log("[RF]PurgeWaterSources Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1) is " + Hydraulics.instance._previousFacilityWaterSources.Contains((ushort)(i + 1)).ToString());
-                    int DAGridX = DrainageAreaGrid.CheckDrainageAreaGridX(ws.m_outputPosition);
-                    int DAGridZ = DrainageAreaGrid.CheckDrainageAreaGridZ(ws.m_outputPosition);
-                    int DAGridID = DAGridZ * DrainageAreaGrid.drainageAreaGridCoefficient + DAGridX;
-                    Debug.Log("[RF]PurgeWaterSources DAGridID = " + DAGridID.ToString());
-                    if (DrainageAreaGrid.DrainageAreaDictionary.ContainsKey(DAGridID))
-                    {
-                        if (DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.x == ws.m_outputPosition.x && DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition.z == ws.m_outputPosition.z)
-                        {
-                            Debug.Log("[RF]PurgeWaterSources DrainageAreaGrid.DrainageAreaDictionary[DAGridID].m_outputPosition == ws.m_outputPosition");
-                            previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                        }
-                    }
-                }*/
+                } 
             }
             for (int i = 0; i < Singleton<BuildingManager>.instance.m_buildings.m_buffer.Length; i++)
             {
                 if (previousStormWaterSourceIDs.Contains(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource))
                 {
-                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
-                    previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
-                    Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource = 0;
+                    previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource); //Do not remove Facility Water Sources
                 }
             }
             if (previousStormWaterSourceIDs.Count > 0)
@@ -812,45 +780,6 @@ namespace Rainfall
             }
         }
 
-        public static void PurgeFacilityWaterSources()
-        {
-            List<ushort> previousStormWaterSourceIDs = new List<ushort>();
-
-            for (int i = 0; i < Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_size; i++)
-            {
-                WaterSource ws = Singleton<TerrainManager>.instance.WaterSimulation.m_waterSources.m_buffer[i];
-                if (ws.m_type > 1)
-                {
-
-                    previousStormWaterSourceIDs.Add((ushort)(i + 1));
-                }
-            }
-            for (int i=0; i<Singleton<BuildingManager>.instance.m_buildings.m_buffer.Length; i++)
-            {
-                if (previousStormWaterSourceIDs.Contains(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource))
-                {
-                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
-                    previousStormWaterSourceIDs.Remove(Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource);
-                    Singleton<BuildingManager>.instance.m_buildings.m_buffer[i].m_waterSource = 0;
-                }
-            }
-            for (int i = 0; i < Singleton<VehicleManager>.instance.m_vehicles.m_buffer.Length; i++)
-            {
-                if (previousStormWaterSourceIDs.Contains(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource))
-                {
-                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource);
-                    previousStormWaterSourceIDs.Remove(Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource);
-                    Singleton<VehicleManager>.instance.m_vehicles.m_buffer[i].m_waterSource = 0;
-                }
-            }
-            if (previousStormWaterSourceIDs.Count > 0)
-            {
-                foreach (ushort id in previousStormWaterSourceIDs)
-                {
-                    Singleton<TerrainManager>.instance.WaterSimulation.ReleaseWaterSource(id);
-                }
-            }
-        }
 
         public static void CleanUpCycle()
         {
@@ -885,7 +814,11 @@ namespace Rainfall
         {
             Hydrology.instance.terminated = true;
             DrainageAreaGrid.Clear();
+            purgePreviousWaterSources();
         }
-        
+        public static void Reinstate()
+        {
+            Hydrology.instance.terminated = false;
+        }
     }
 }
