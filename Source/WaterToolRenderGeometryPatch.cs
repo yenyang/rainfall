@@ -26,7 +26,7 @@ namespace Rainfall
 
                 float num = Mathf.Sqrt(Mathf.Abs(currentDrainageArea.Value.m_outputRate)) * 0.4f + 10f;
 				float num2 = (Mathf.Abs(currentDrainageArea.Value.m_outputRate) + 1f) * 0.015625f;
-				Vector3 pos = currentDrainageArea.Value.m_outputPosition + new Vector3(0f, num2 * 0.5f, 0f);
+				Vector3 pos = currentDrainageArea.Value.m_outputPosition;
 				Matrix4x4 matrix = Matrix4x4.TRS(s: new Vector3(num * 2f, num2 * 0.5f, num * 2f), pos: pos, q: Quaternion.identity);
 				___m_propertyBlock.Clear();
 				if (currentDrainageArea.Value.m_enabled == true)
@@ -63,7 +63,7 @@ namespace Rainfall
 						WaterSource currentWaterSource = waterSources.m_buffer[i];
 						float num = Mathf.Sqrt(Mathf.Abs(currentWaterSource.m_outputRate)) * 0.4f + 10f;
 						float num2 = (Mathf.Abs(currentWaterSource.m_outputRate) + 1f) * 0.015625f;
-						Vector3 pos = currentWaterSource.m_outputPosition + new Vector3(0f, num2 * 0.5f, 0f);
+						Vector3 pos = currentWaterSource.m_outputPosition;
 						if (logging) Debug.Log("[RF]WaterToolRenderGeometry pos.y = " + pos.y);
 						Vector2 waterSourcePositionXZ = new Vector2(currentWaterSource.m_outputPosition.x, currentWaterSource.m_outputPosition.z);
 						Vector2 mousePositionXZ = new Vector2(___m_mousePosition.x, ___m_mousePosition.z);

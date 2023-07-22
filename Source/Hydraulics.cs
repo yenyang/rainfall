@@ -22,6 +22,7 @@ namespace Rainfall
         private GameObject buildingWindowGameObject;
         private FieldInfo baseSub;
         public static Hydraulics instance = null;
+        public bool halted = false;
         private int _capacity;
         public bool initialized;
         public bool loaded;
@@ -1888,6 +1889,10 @@ namespace Rainfall
             if (Hydraulics.instance._drainageGroupsNames.Contains(Hydraulics.instance._drainageGroups[id]) == false && Hydraulics.instance._drainageGroups[id] != Hydraulics.instance._buildingManager.GetDefaultBuildingName(id, InstanceID.Empty))
                 Hydraulics.instance._drainageGroupsNames.Add(Hydraulics.instance._drainageGroups[id]);
             
+        }
+        public static void HaltAllRFAssets()
+        {
+            Hydraulics.instance.halted = true;
         }
         /*
         public static string generateCulvertName(ushort id, bool upstream)

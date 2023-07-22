@@ -168,7 +168,7 @@ namespace Rainfall
         protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, int finalProductionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
         {
             productionRate = 0;
-            if (Hydrology.instance.terminated)
+            if (Hydraulics.instance.halted)
             {
                 return;
             }
@@ -297,7 +297,7 @@ namespace Rainfall
 
         private bool HandleWaterSource(ushort buildingID, ref Building data, bool output, int rate, int max, float radius)
         {
-            if (Hydrology.instance.terminated)
+            if (Hydraulics.instance.halted)
             {
                 return false;
             }
@@ -349,7 +349,7 @@ namespace Rainfall
 
         private bool HandleFloodSource(ushort buildingID, ref Building data, bool output, int rate, int max, float radius)
         {
-            if (Hydrology.instance.terminated)
+            if (Hydraulics.instance.halted)
             {
                 return false;
             }

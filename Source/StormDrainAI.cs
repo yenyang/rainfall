@@ -691,7 +691,7 @@ namespace Rainfall
         protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, int finalProductionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
         {
             bool logging = false;
-            if (Hydrology.instance.terminated)
+            if (Hydraulics.instance.halted)
             {
                 return;
             }
