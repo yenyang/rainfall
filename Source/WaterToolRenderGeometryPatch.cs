@@ -46,7 +46,7 @@ namespace Rainfall
 				{
                     
                     WaterSourceEntry.WaterSourceType currentWaterSourceType = WaterSourceManager.GetWaterSourceEntry(i + 1).GetWaterSourceType();
-                    bool logging = true;
+                    bool logging = false;
 					if (logging)
 					{
 						if (WaterSourceEntry.waterSourceTypeNames.ContainsKey(currentWaterSourceType))
