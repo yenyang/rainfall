@@ -46,7 +46,7 @@ namespace Rainfall
         private WaterSourceType type = WaterSourceType.Undefined;
         private ushort buildingID = 0;
 		private int drainageBasinID = 0;
-        List<WaterSourceType> facilityWaterSourceTypes = new List<WaterSourceType>() { WaterSourceType.WaterFacility, WaterSourceType.SewerFacility, WaterSourceType.StormDrainInletFacility, WaterSourceType.StormDrainOutletFacility, WaterSourceType.DamPowerHouseFacility, WaterSourceType.WaterCleaner, WaterSourceType.WaterTruck};
+        List<WaterSourceType> facilityWaterSourceTypes = new List<WaterSourceType>() { WaterSourceType.WaterFacility, WaterSourceType.SewerFacility, WaterSourceType.StormDrainInletFacility, WaterSourceType.StormDrainOutletFacility, WaterSourceType.DamPowerHouseFacility, WaterSourceType.WaterCleaner, WaterSourceType.WaterTruck, WaterSourceType.FloodSpawner, WaterSourceType.RetentionBasin};
 		public WaterSourceEntry(WaterSourceType currentType, ushort currentBuildingID, int currentDrainageBasinID) //works with any type
         {
             type = currentType;
