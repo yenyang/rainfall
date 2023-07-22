@@ -22,6 +22,8 @@ namespace Rainfall
             DamPowerHouseFacility,
             WaterCleaner,
             WaterTruck,
+            FloodSpawner,
+            RetentionBasin,
         }
 
         public static readonly Dictionary<WaterSourceType, string> waterSourceTypeNames = new Dictionary<WaterSourceType, string>()
@@ -37,6 +39,8 @@ namespace Rainfall
             {WaterSourceType.DamPowerHouseFacility,         "Dam Water Source"},
             {WaterSourceType.WaterCleaner,                  "Water Cleaner"},
             {WaterSourceType.WaterTruck,                    "Water Truck"},
+            {WaterSourceType.FloodSpawner,                  "Flood Spawner" },
+            {WaterSourceType.RetentionBasin,                "Retention Basin" },
         };
 
         private WaterSourceType type = WaterSourceType.Undefined;

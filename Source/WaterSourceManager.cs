@@ -22,7 +22,9 @@ namespace Rainfall
             {WaterSourceEntry.WaterSourceType.StormDrainOutletFacility, new Color(1.0f, 0.0f, 0.0f, 1f) },
             {WaterSourceEntry.WaterSourceType.WaterCleaner, new Color(.4f, 1f, 1f, 1f) },
             {WaterSourceEntry.WaterSourceType.WaterFacility, new Color(0f, 0f, 0.6f, 1f) },
-            {WaterSourceEntry.WaterSourceType.WaterTruck, new Color(1f, 0.5f, 0f, 1f) }
+            {WaterSourceEntry.WaterSourceType.WaterTruck, new Color(1f, 0.5f, 0f, 1f) },
+            {WaterSourceEntry.WaterSourceType.FloodSpawner, new Color(0f, 1f, 0f, 1f) },
+            {WaterSourceEntry.WaterSourceType.RetentionBasin, new Color(0.8f, 0.4f, 0f, 1f) },
         };
 
         private static int m_entryCount = 0;
@@ -227,6 +229,19 @@ namespace Rainfall
                         if (m_buffer[waterSourceID].GetWaterSourceType() == WaterSourceEntry.WaterSourceType.Undefined)
                         {
                             m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.WaterCleaner, i);
+                            m_entryCount++;
+                        }
+                    }
+                    else if (currentBuildingAI is NaturalDrainageAI)
+                    {
+                        NaturalDrainageAI currentNaturalDrainageAI = currentBuildingAI as NaturalDrainageAI;
+                        if (currentNaturalDrainageAI.m_standingWaterDepth > 0f)
+                        {
+                            m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, i);
+                            m_entryCount++;
+                        } else if (currentNaturalDrainageAI.m_naturalDrainageMultiplier > 1f)
+                        {
+                            m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, i);
                             m_entryCount++;
                         }
                     }

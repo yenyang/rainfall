@@ -690,7 +690,11 @@ namespace Rainfall
 
         protected override void ProduceGoods(ushort buildingID, ref Building buildingData, ref Building.Frame frameData, int productionRate, int finalProductionRate, ref Citizen.BehaviourData behaviour, int aliveWorkerCount, int totalWorkerCount, int workPlaceCount, int aliveVisitorCount, int totalVisitorCount, int visitPlaceCount)
         {
-            
+            bool logging = false;
+            if (Hydrology.instance.terminated)
+            {
+                return;
+            }
             if (finalProductionRate != 0)
             {
                 Hydraulics.updateDistrictAndDrainageGroup(buildingID);
@@ -934,10 +938,10 @@ namespace Rainfall
                     }
                     else if (SDwaterSurfaceElevation <= buildingData.m_position.y + SDfloodingDifferential)
                     {
-                        Debug.Log("[RF]StormdrainAI " + FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID).ToString());
+                        if (logging) Debug.Log("[RF]StormdrainAI.ProduceGoods  FloodingTimers.instance.getBuildingFloodingElapsedTime for building " + buildingID.ToString() + " = " + FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID).ToString());
                         FloodingTimers.instance.resetBuildingFloodedStartTime(buildingID);
                         FloodingTimers.instance.resetBuildingFloodingStartTime(buildingID);
-                        Debug.Log("[RF]StormdrainAI " + FloodingTimers.instance.getBuildingFloodingElapsedTime(buildingID).ToString());
+                        if (logging) Debug.Log("[RF]StormdrainAI.ProduceGoods  FloodingTimers.instance.getBuildingFloodedElapsedTime for building " + buildingID.ToString() + " = " + FloodingTimers.instance.getBuildingFloodedElapsedTime(buildingID).ToString());
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood);
                         buildingData.m_problems = Notification.RemoveProblems(buildingData.m_problems, Notification.Problem1.Flood | Notification.Problem1.MajorProblem);
                     }
