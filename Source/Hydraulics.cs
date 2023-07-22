@@ -1784,16 +1784,20 @@ namespace Rainfall
                 {
                     BuildingManager _buildingManager = Singleton<BuildingManager>.instance;
                     int _capacity = _buildingManager.m_buildings.m_buffer.Length;
-                    int id;
-                    for (id = 0; id < _capacity; id++)
+                    List<ushort> buildingIDsToRemove = new List<ushort>();
+                    for (ushort id = 0; id < _capacity; id++)
                     {
                         BuildingAI ai = _buildingManager.m_buildings.m_buffer[id].Info.m_buildingAI;
                         if (ai is NaturalDrainageAI || ai is StormDrainAI)
                         {
                             // Debug.Log("[RF].Hydrology  Failed AI Test: " + ai.ToString());
-                            _buildingManager.ReleaseBuilding((ushort)id);
+                            buildingIDsToRemove.Add(id);
                         }
                         
+                    }
+                    foreach(ushort id in buildingIDsToRemove)
+                    {
+                        _buildingManager.ReleaseBuilding(id);
                     }
                 }
                 catch (Exception e)
