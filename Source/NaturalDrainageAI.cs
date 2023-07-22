@@ -182,7 +182,7 @@ namespace Rainfall
                     {
                         if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.RetentionBasin || currentWaterSourceEntry.GetBuildingID() != buildingID)
                         {
-                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods1 Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                             buildingData.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
 
                         }
@@ -191,7 +191,7 @@ namespace Rainfall
                     {
                         if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.FloodSpawner || currentWaterSourceEntry.GetBuildingID() != buildingID)
                         {
-                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods1 Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                             buildingData.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
 
                         }
@@ -220,7 +220,7 @@ namespace Rainfall
 
                         if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.RetentionBasin || currentWaterSourceEntry.GetBuildingID() != buildingID)
                         {
-                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods2 Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                             buildingData.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
                             return;
                         }
@@ -260,7 +260,7 @@ namespace Rainfall
 
                             if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.FloodSpawner || currentWaterSourceEntry.GetBuildingID() != buildingID)
                             {
-                                if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleFloodSource Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                                if (logging) Debug.Log("[RF]NaturalDrainageAI.ProduceGoods2 Set data.m_waterSource = 0 for buildingID " + buildingID.ToString() + " since WSM says WaterSource " + buildingData.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                                 buildingData.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
                                 return;
                             }
@@ -341,7 +341,7 @@ namespace Rainfall
                     return false;
                 }
             }
-            WaterSourceManager.SetWaterSourceEntry(buildingID, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, buildingID));
+            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, buildingID));
             return true;
         }
 
@@ -393,7 +393,7 @@ namespace Rainfall
                     return false;
                 }
             }
-            WaterSourceManager.SetWaterSourceEntry(buildingID, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, buildingID));
+            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, buildingID));
 
             return true;
         }

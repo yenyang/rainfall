@@ -21,7 +21,7 @@ namespace Rainfall
 			foreach (KeyValuePair<int, DrainageArea> currentDrainageArea in DrainageAreaGrid.DrainageAreaDictionary) 
 			{
 				if (currentDrainageArea.Value.m_hidden == true) continue;
-				bool logging = false;
+				bool logging = true;
 				if (logging) Debug.Log("[RF]WaterToolRenderGeometry currentDrainageArea.Value.m_outputPosition.y = " + currentDrainageArea.Value.m_outputPosition.y);
 
                 float num = Mathf.Sqrt(Mathf.Abs(currentDrainageArea.Value.m_outputRate)) * 0.4f + 10f;

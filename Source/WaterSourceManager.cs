@@ -234,13 +234,16 @@ namespace Rainfall
                     }
                     else if (currentBuildingAI is NaturalDrainageAI)
                     {
+                        bool logging = true;
                         NaturalDrainageAI currentNaturalDrainageAI = currentBuildingAI as NaturalDrainageAI;
                         if (currentNaturalDrainageAI.m_standingWaterDepth > 0f)
                         {
+                            if (logging) Debug.Log("[RF]WaterSourceManager.Awake Found Retention Basin at building " + i + " watersourceID " + waterSourceID.ToString()); 
                             m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, i);
                             m_entryCount++;
                         } else if (currentNaturalDrainageAI.m_naturalDrainageMultiplier > 1f)
                         {
+                            if (logging) Debug.Log("[RF]WaterSourceManager.Awake Found FloodSpawner at building " + i + " watersourceID " + waterSourceID.ToString());
                             m_buffer[waterSourceID] = new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, i);
                             m_entryCount++;
                         }
