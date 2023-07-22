@@ -21,7 +21,7 @@ namespace Rainfall
 			foreach (KeyValuePair<int, DrainageArea> currentDrainageArea in DrainageAreaGrid.DrainageAreaDictionary) 
 			{
 				if (currentDrainageArea.Value.m_hidden == true) continue;
-				bool logging = true;
+				bool logging = false;
 				if (logging) Debug.Log("[RF]WaterToolRenderGeometry currentDrainageArea.Value.m_outputPosition.y = " + currentDrainageArea.Value.m_outputPosition.y);
 
                 float num = Mathf.Sqrt(Mathf.Abs(currentDrainageArea.Value.m_outputRate)) * 0.4f + 10f;
@@ -46,13 +46,25 @@ namespace Rainfall
 				{
                     
                     WaterSourceEntry.WaterSourceType currentWaterSourceType = WaterSourceManager.GetWaterSourceEntry(i + 1).GetWaterSourceType();
-
-					if (WaterSourceManager.WaterSourceColors.ContainsKey(currentWaterSourceType))
+                    bool logging = true;
+					if (logging)
+					{
+						if (WaterSourceEntry.waterSourceTypeNames.ContainsKey(currentWaterSourceType))
+						{
+							Debug.Log("[RF].WaterToolRenderGeometryPatch currentWaterSourceType = " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceType]);
+						} else
+						{
+                            Debug.Log("[RF].WaterToolRenderGeometryPatch WaterSourceEntry.waterSourceTypeNames.ContainsKey(currentWaterSourceType) == false");
+                        }
+					}
+	
+                    if (WaterSourceManager.WaterSourceColors.ContainsKey(currentWaterSourceType))
 					{
 						WaterSource currentWaterSource = waterSources.m_buffer[i];
 						float num = Mathf.Sqrt(Mathf.Abs(currentWaterSource.m_outputRate)) * 0.4f + 10f;
 						float num2 = (Mathf.Abs(currentWaterSource.m_outputRate) + 1f) * 0.015625f;
 						Vector3 pos = currentWaterSource.m_outputPosition + new Vector3(0f, num2 * 0.5f, 0f);
+						if (logging) Debug.Log("[RF]WaterToolRenderGeometry pos.y = " + pos.y);
 						Vector2 waterSourcePositionXZ = new Vector2(currentWaterSource.m_outputPosition.x, currentWaterSource.m_outputPosition.z);
 						Vector2 mousePositionXZ = new Vector2(___m_mousePosition.x, ___m_mousePosition.z);
 						Matrix4x4 matrix = Matrix4x4.TRS(s: new Vector3(num * 2f, num2 * 0.5f, num * 2f), pos: pos, q: Quaternion.identity);

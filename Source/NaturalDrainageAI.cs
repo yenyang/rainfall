@@ -341,7 +341,9 @@ namespace Rainfall
                     return false;
                 }
             }
-            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, buildingID));
+            bool flag = WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, buildingID));
+            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleWaterSource setWaterSourceEntry Flag = " + flag.ToString());
+            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleWaterSource data.m_waterSource = " + data.m_waterSource.ToString() + " buildingID = " + buildingID.ToString());
             return true;
         }
 
@@ -393,8 +395,10 @@ namespace Rainfall
                     return false;
                 }
             }
-            WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, buildingID));
 
+            bool flag = WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, buildingID));
+            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleFloodSource setWaterSourceEntry Flag = " + flag.ToString());
+            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleFloodSource data.m_waterSource = " + data.m_waterSource.ToString() + " buildingID = " + buildingID.ToString());
             return true;
         }
 
