@@ -67,8 +67,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.13.1.1";
-        private readonly string buildTimestamp = "2023.07.22 07:54 pm";
+        private readonly string versionNumber = "V2.13.1.3";
+        private readonly string buildTimestamp = "2023.07.23 07:58 pm";
 
         private int initialTileCount = 0;
 

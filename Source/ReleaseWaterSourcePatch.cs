@@ -16,10 +16,10 @@ namespace Rainfall
                 WaterSourceManager.SetWaterSourceEntry((int)source, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.Empty));
                 if (logging) Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix SetWaterSourceEntry " + source.ToString() + " to Empty.");
             }
-            if (source > __instance.m_waterSources.m_size-1)
+            if (source > __instance.m_waterSources.m_size)
             {
                 Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix source = " + source.ToString() + " __instance.m_waterSources.m_size = " + __instance.m_waterSources.m_size.ToString());
-                Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix source > __instance.m_waterSources.m_size-1 therefore skip releaseWaterSource ");
+                Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix source > __instance.m_waterSources.m_size therefore skip releaseWaterSource ");
                 return false;
             }
             return true;
