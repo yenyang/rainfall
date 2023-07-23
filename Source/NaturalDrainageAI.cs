@@ -109,6 +109,35 @@ namespace Rainfall
         public override void ReleaseBuilding(ushort buildingID, ref Building data)
         {
             Hydraulics.removeNaturalDrainageAsset(buildingID);
+            bool logging = false;
+            if (WaterSourceManager.AreYouAwake())
+            {
+                if (data.m_waterSource != 0)
+                {
+                    WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(data.m_waterSource);
+                    if (this.m_standingWaterDepth > 0)
+                    {
+                        if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.RetentionBasin || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                        {
+                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ReleaseBuilding Set data.m_waterSource = 0 for Retention Basin ID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+                        }
+                    }
+                    else if (this.m_naturalDrainageMultiplier > 1)
+                    {
+                        if (currentWaterSourceEntry.GetWaterSourceType() != WaterSourceEntry.WaterSourceType.FloodSpawner || currentWaterSourceEntry.GetBuildingID() != buildingID)
+                        {
+                            if (logging) Debug.Log("[RF]NaturalDrainageAI.ReleaseBuilding Set data.m_waterSource = 0 for flood Spawner ID " + buildingID.ToString() + " since WSM says WaterSource " + data.m_waterSource.ToString() + " is connected to buildingID " + currentWaterSourceEntry.GetBuildingID() + " and is a " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
+                            data.m_waterSource = 0; //If according to the WSM the watersource associated with building is already assocaited with another building then set watersource for this building to 0
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Natural Drainage water source with no standing water or flood multiplier???");
+                    }
+
+                }
+            }
             base.ReleaseBuilding(buildingID, ref data);
         }
 
@@ -227,22 +256,33 @@ namespace Rainfall
 
                     }
                 }
-                WaterSource watersourceData = waterSimulation.LockWaterSource(buildingData.m_waterSource);
-             
-                float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(buildingData.m_position));
-                if (waterSurfaceElevation > watersourceData.m_target)
+                try
                 {
-                    watersourceData.m_outputRate = 0u;
-                } else if (watersourceData.m_outputRate == 0u)
+                    WaterSource watersourceData = waterSimulation.LockWaterSource(buildingData.m_waterSource);
+
+                    float waterSurfaceElevation = Singleton<TerrainManager>.instance.WaterLevel(VectorUtils.XZ(buildingData.m_position));
+                    if (waterSurfaceElevation > watersourceData.m_target)
+                    {
+                        watersourceData.m_outputRate = 0u;
+                    }
+                    else if (watersourceData.m_outputRate == 0u)
+                    {
+                        watersourceData.m_outputRate = ((50u * watersourceData.m_water) / 1000u) - ((50u * watersourceData.m_water) / 1000u) % 50 + 50;
+                    }
+                    if (watersourceData.m_water < 50u)
+                    {
+                        watersourceData.m_outputRate += 50u;
+                        watersourceData.m_water = 1000u * (watersourceData.m_outputRate / 50);
+                    }
+                    waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
+                } catch (Exception e)
                 {
-                    watersourceData.m_outputRate = ((50u*watersourceData.m_water)/1000u)- ((50u * watersourceData.m_water) / 1000u)%50+50;
+                    Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Encountered Exception " + e.ToString() + " for Retention Basin " + buildingID.ToString());
+                    Debug.Log("[RF]NaturalDrainageAI.ProduceGoods buildingData.m_waterSource = " + buildingData.m_waterSource.ToString());
+                    WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(buildingData.m_waterSource);
+                    Debug.Log("[RF]NaturalDrainageAI.ProduceGoods currentWaterSourceEntry.GetBuildingID() = " + currentWaterSourceEntry.GetBuildingID().ToString());
+                    Debug.Log("[RF]NaturalDrainageAI.ProduceGoods WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()] = " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                 }
-                if (watersourceData.m_water < 50u)
-                {
-                    watersourceData.m_outputRate += 50u;
-                    watersourceData.m_water = 1000u * (watersourceData.m_outputRate / 50);
-                }
-                waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
                 
             }
 
@@ -269,22 +309,32 @@ namespace Rainfall
                         }
                     }
 
-                    WaterSource watersourceData = waterSimulation.LockWaterSource(buildingData.m_waterSource);
+                    try
+                    {
+                        WaterSource watersourceData = waterSimulation.LockWaterSource(buildingData.m_waterSource);
 
-                    
-                    if (Singleton<WeatherManager>.instance.m_currentRain == 0f || Hydrology.instance.terminated == true)
+
+                        if (Singleton<WeatherManager>.instance.m_currentRain == 0f || Hydrology.instance.terminated == true)
+                        {
+                            watersourceData.m_outputRate = 0u;
+                        }
+                        else if (Singleton<WeatherManager>.instance.m_currentRain > 0f)
+                        {
+                            watersourceData.m_outputRate = (uint)(m_naturalDrainageMultiplier * Singleton<WeatherManager>.instance.m_currentRain * OptionHandler.getSliderSetting("GlobalRunoffScalar") * OptionHandler.getSliderSetting("FloodSpawnerScalar"));
+                        }
+                        if (watersourceData.m_water < (uint)(50f * m_naturalDrainageMultiplier))
+                        {
+                            watersourceData.m_water = (uint)(1000f * m_naturalDrainageMultiplier);
+                        }
+                        waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
+                    } catch (Exception e)
                     {
-                        watersourceData.m_outputRate = 0u;
+                        Debug.Log("[RF]NaturalDrainageAI.ProduceGoods Encountered Exception " + e.ToString() + " for Flood Spawner " + buildingID.ToString());
+                        Debug.Log("[RF]NaturalDrainageAI.ProduceGoods buildingData.m_waterSource = " + buildingData.m_waterSource.ToString());
+                        WaterSourceEntry currentWaterSourceEntry = WaterSourceManager.GetWaterSourceEntry(buildingData.m_waterSource);
+                        Debug.Log("[RF]NaturalDrainageAI.ProduceGoods currentWaterSourceEntry.GetBuildingID() = " + currentWaterSourceEntry.GetBuildingID().ToString());
+                        Debug.Log("[RF]NaturalDrainageAI.ProduceGoods WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()] = " + WaterSourceEntry.waterSourceTypeNames[currentWaterSourceEntry.GetWaterSourceType()]);
                     }
-                    else if (Singleton<WeatherManager>.instance.m_currentRain > 0f)
-                    {
-                        watersourceData.m_outputRate = (uint)(m_naturalDrainageMultiplier * Singleton<WeatherManager>.instance.m_currentRain * OptionHandler.getSliderSetting("GlobalRunoffScalar") * OptionHandler.getSliderSetting("FloodSpawnerScalar"));
-                    }
-                    if (watersourceData.m_water < (uint)(50f * m_naturalDrainageMultiplier))
-                    {
-                        watersourceData.m_water = (uint)(1000f * m_naturalDrainageMultiplier);
-                    }
-                    waterSimulation.UnlockWaterSource(buildingData.m_waterSource, watersourceData);
                 }
 
             }
@@ -342,7 +392,6 @@ namespace Rainfall
                 }
             }
             bool flag = WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.RetentionBasin, buildingID));
-            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleWaterSource setWaterSourceEntry Flag = " + flag.ToString());
             if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleWaterSource data.m_waterSource = " + data.m_waterSource.ToString() + " buildingID = " + buildingID.ToString());
             return true;
         }
@@ -397,7 +446,6 @@ namespace Rainfall
             }
 
             bool flag = WaterSourceManager.SetWaterSourceEntry(data.m_waterSource, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.FloodSpawner, buildingID));
-            if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleFloodSource setWaterSourceEntry Flag = " + flag.ToString());
             if (logging) Debug.Log("[RF]NaturalDrainageAI.HandleFloodSource data.m_waterSource = " + data.m_waterSource.ToString() + " buildingID = " + buildingID.ToString());
             return true;
         }

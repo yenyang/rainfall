@@ -69,7 +69,7 @@ namespace Rainfall
 						Vector2 mousePositionXZ = new Vector2(___m_mousePosition.x, ___m_mousePosition.z);
 						Matrix4x4 matrix = Matrix4x4.TRS(s: new Vector3(num * 2f, num2 * 0.5f, num * 2f), pos: pos, q: Quaternion.identity);
 						___m_propertyBlock.Clear();
-						if (Vector2.Distance(waterSourcePositionXZ, mousePositionXZ) < 8f)
+						if (Vector2.Distance(waterSourcePositionXZ, mousePositionXZ) < num)
 						{
 							___m_propertyBlock.SetColor(___ID_Color2, new Color(1f, 1f, 1f, 1f));
 						}
@@ -104,7 +104,8 @@ namespace Rainfall
 					WaterSource currentWaterSource = waterSources.m_buffer[i];
 					Vector2 waterSourcePositionXZ = new Vector2(currentWaterSource.m_outputPosition.x, currentWaterSource.m_outputPosition.z);
 					Vector2 mousePositionXZ = new Vector2(___m_mousePosition.x, ___m_mousePosition.z);
-					if (Vector2.Distance(waterSourcePositionXZ, mousePositionXZ) < 8f)
+                    float num = Mathf.Sqrt(Mathf.Abs(currentWaterSource.m_outputRate)) * 0.4f + 10f;
+                    if (Vector2.Distance(waterSourcePositionXZ, mousePositionXZ) < num)
 					{
 						waterSourcesToRelease.Add(i + 1);
 					}

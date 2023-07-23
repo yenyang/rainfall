@@ -7,7 +7,7 @@ namespace Rainfall
     class WaterSimulationReleaseWaterSourcePatch
     {
        
-        static bool Prefix(ushort source)
+        static bool Prefix(ushort source, ref WaterSimulation __instance)
         {
             bool logging = false;
             if (logging) Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix Hello!");
@@ -15,6 +15,12 @@ namespace Rainfall
             {
                 WaterSourceManager.SetWaterSourceEntry((int)source, new WaterSourceEntry(WaterSourceEntry.WaterSourceType.Empty));
                 if (logging) Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix SetWaterSourceEntry " + source.ToString() + " to Empty.");
+            }
+            if (source > __instance.m_waterSources.m_size-1)
+            {
+                Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix source = " + source.ToString() + " __instance.m_waterSources.m_size = " + __instance.m_waterSources.m_size.ToString());
+                Debug.Log("[RF]WaterSimulationReleaseWaterSourcePatch.Prefix source > __instance.m_waterSources.m_size-1 therefore skip releaseWaterSource ");
+                return false;
             }
             return true;
         }
