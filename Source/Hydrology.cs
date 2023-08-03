@@ -29,11 +29,7 @@ namespace Rainfall
         public bool initialized;
         public static Hydrology instance = null;
         public bool loaded;
-        //private float stormDuration = 30;
-        //private decimal stormTime = 0;
-        //private bool previousStorm = false;
         private const decimal secondsToMinutes = (decimal)(1f / 60f);
-        //private const float rainStep = 0.0002f;
         private const int ChirpRainTweetChance = 1;
         private string forecasterName;
         private string forecasterChannel;
@@ -57,8 +53,6 @@ namespace Rainfall
         private List<string> chirperLastNames;
         private List<string> introductionStatements;
         private List<string> beforeTimeStatements;
-        private List<string> afterIntensityAdjectiveStatements;
-        private SortedList<float, string> depthAdjectives;
         private List<string> beforeIntensityAdjectiveStatements;
         private SortedList<float, string> intensityAdjectives;
         private List<string> beforeReturnRateStatements;
@@ -67,8 +61,8 @@ namespace Rainfall
 
         public List<ushort> buildingToReviewAndAdd;
 
-        private readonly string versionNumber = "V2.13.1.3";
-        private readonly string buildTimestamp = "2023.07.23 07:58 pm";
+        private readonly string versionNumber = "V2.14.0.0";
+        private readonly string buildTimestamp = "2023.08.02 07:17 pm";
 
         private int initialTileCount = 0;
 
@@ -122,38 +116,18 @@ namespace Rainfall
             if (terminated) return;
 
             if (!initialized) return;
-            // Debug.Log("[RF].Hydrology  before tick & initialized");
 
             if (!loaded) return;
 
-            /*if (stormTime > (decimal)stormDuration)
-            {
-                _weatherManager.m_currentRain = 0;
-                _weatherManager.m_targetRain = 0;
-               
-                stormTime = 0;
-                stormDuration = 0;
-                isRaining = false;
-                Debug.Log("[RF]Hydrology BeforeTick Storm Ended StormTime > StormDuration");
-            }*/
 
             if (endStorm == true)
             {
                 _weatherManager.m_currentRain = 0;
                 _weatherManager.m_targetRain = 0;
-                //stormTime = 0;
-                //stormDuration = 0;
                 isRaining = false;
                 endStorm = false;
             }
-            if (_weatherManager.m_currentRain < _weatherManager.m_targetRain)
-            {
-                _weatherManager.m_currentRain = Mathf.Min(_weatherManager.m_targetRain, _weatherManager.m_currentRain - 0.0002f + OptionHandler.getSliderSetting("IntensityRateOfChange"));
-            } else if (_weatherManager.m_currentRain > _weatherManager.m_targetRain)
-            {
-                _weatherManager.m_currentRain = Mathf.Max(_weatherManager.m_targetRain, _weatherManager.m_currentRain + 0.0002f - OptionHandler.getSliderSetting("IntensityRateOfChange"));
-            }
-
+           
             
             
             base.OnBeforeSimulationTick();
@@ -163,6 +137,7 @@ namespace Rainfall
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
             bool logging = false;
+            
             if (!terminated && OptionHandler.getSliderSetting("GlobalRunoffScalar") == 0 || _weatherManager.m_enableWeather == false)
             {
                 terminated = true;
@@ -177,8 +152,6 @@ namespace Rainfall
                 return;
 
 
-            //_count += simulationTimeDelta;
-
             if (!initialized && Hydraulics.instance.initialized == true)
             {
                 InitializeManagers();
@@ -187,24 +160,7 @@ namespace Rainfall
                 _capacity = _buildingManager.m_buildings.m_buffer.Length;
                 terminated = false;
                 isRaining = false;
-                // Debug.Log("[RF].Hydrology  " + _capacity.ToString());
-
-
-
-                /*
-                if (_weatherManager.m_targetRain > 0 && OptionHandler.getDropdownSetting("PreviousStormOption") != 0 && OptionHandler.getDropdownSetting("PreviousStormOption") != 3)
-                {
-
-                    if (_weatherManager.m_currentRain > 0.01)
-                    {
-                        previousStorm = true;
-                    }
-                }
-                if (OptionHandler.getDropdownSetting("PreviousStormOption") == 3)
-                {
-                    _weatherManager.m_currentRain = 0;
-                    _weatherManager.m_targetRain = 0;
-                }*/
+                
                 Debug.Log("[RF].Hydrology  Starting Storm Drain Mod! Version: " + versionNumber + " Build Timestamp: " + buildTimestamp);
                 initialized = true;
             }
@@ -232,7 +188,6 @@ namespace Rainfall
             } else if (_gameAreaManager.m_areaGrid.Length != initialTileCount && DrainageAreaGrid.areYouAwake())
             {
                 DrainageAreaGrid.Clear();
-                //WaterSourceManager.Clear();
                 return;
             } else if (eightyOneTileCheckPeriod > 0f)
             {
@@ -242,11 +197,7 @@ namespace Rainfall
                 DrainageAreaGrid.updateDrainageAreaGridForNewTile(logging);
                 eightyOneTileCheckPeriod = 15f;
             } 
-            /*if (!WaterSourceManager.AreYouAwake())
-            {
-                WaterSourceManager.Awake();
-                return;
-            }*/
+            
 
             if (buildingToReviewAndAdd.Count > 0)
             {
@@ -272,7 +223,11 @@ namespace Rainfall
                 }
                 buildingToReviewAndAdd.Clear();
             }
-           
+
+            if (_weatherManager.m_currentRain < 0f || _weatherManager.m_currentRain > 1f)
+            {
+                _weatherManager.m_currentRain = 0f;
+            }
             if (_weatherManager.m_currentRain == 0 && isRaining == false)
             {
 
@@ -314,43 +269,25 @@ namespace Rainfall
 
                     isRaining = true;
 
-                    //Debug.Log("[RF]Hydrology.onUpdate1 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-
-                    /*
-                    if (_weatherManager.m_targetRain > 0)
-                    {
-                       
-                       
-                        stormDuration = random.Next((int)OptionHandler.getSliderSetting("MinimumStormDuration"), (int)OptionHandler.getSliderSetting("MaximumStormDuration"));
-                        stormDuration -= stormDuration % 3f;
-                        Debug.Log("[RF]Hydrology.OnUpdate1 stormDuration = " + stormDuration.ToString());
-                        if (!previousStorm)
-                        {
-                            stormTime = (decimal)(realTimeDelta);
-
-                        }
-                        else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 1)
-                        {
-                            stormTime = (decimal)(realTimeDelta);
-
-                        }
-                        else if ((int)OptionHandler.getDropdownSetting("PreviousStormOption") == 2)
-                        {
-                            stormTime = (decimal)(stormDuration);
-
-                        }
-                        
-
-                    }*/
+                    
                     if (OptionHandler.getCheckboxSetting("ChirpForecasts") == true)
                     {
                         ChirpForecast.SendMessage(forecasterName, generateRainFallForecast());
                     }
                 }
-                // Debug.Log("[RF].Hydrology  Started to Rain with int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
+                
             }
             else if (_weatherManager.m_currentRain > 0 && isRaining == true && simulationTimeDelta > 0 && realTimeDelta > 0 /*&& stormTime < (decimal)stormDuration*/)
             {
+                if (_weatherManager.m_currentRain < _weatherManager.m_targetRain)
+                {
+                    _weatherManager.m_currentRain = Mathf.Clamp(Mathf.Min(_weatherManager.m_targetRain, _weatherManager.m_currentRain - 0.0002f + OptionHandler.getSliderSetting("IntensityRateOfChange")),0f, 1f);
+                }
+                else if (_weatherManager.m_currentRain > _weatherManager.m_targetRain)
+                {
+                    _weatherManager.m_currentRain = Mathf.Clamp(Mathf.Max(_weatherManager.m_targetRain, _weatherManager.m_currentRain + 0.0002f - OptionHandler.getSliderSetting("IntensityRateOfChange")),0f,1f);
+                }
+
                 if (OptionHandler.getCheckboxSetting("ChirpRainTweets") == true && random.Next(0, 10000) < ChirpRainTweetChance)
                 {
                     string tweeterName = randomString(chirperFirstNames) + " " + randomString(chirperLastNames);
@@ -372,38 +309,25 @@ namespace Rainfall
                     }
                 }
 
-                //Debug.Log("[RF].Hydrology  is raining ");
-
-
-                //Debug.Log("[RF]Hydrology.onUpdate2 Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-                //stormTime += (decimal)realTimeDelta;
             }
-            //Debug.Log("[RF].Hydrology  Raining with int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
+            
 
             else if (_weatherManager.m_currentRain == 0 && isRaining == true)
             {
-                /*try
-                {
-                    purgePreviousWaterSources();
-                }
-                catch (Exception e)
-                {
-                    Debug.Log("[RF]Hydrology.OnUpdate Could not remove water sources from buildings encountered exception " + e.ToString());
-                }*/
+               
                 isRaining = false;
                 cleanUpCycle = false;
                 
-                //Debug.Log("[RF].Hydrology  No longer Raining. int = " + _weatherManager.m_currentRain.ToString() + " but will rain " + _weatherManager.m_targetRain.ToString());
             }
             if (isRaining == false && simulationTimeDelta > 0)
             {
                 _realTimeCountSinceLastStorm += realTimeDelta;
-                if (_realTimeCountSinceLastStorm > OptionHandler.getSliderSetting("FreezeLandvaluesTimer")) //repalce with Modsetting Variable
+                if (_realTimeCountSinceLastStorm > OptionHandler.getSliderSetting("FreezeLandvaluesTimer")) 
                 {
                     _preRainfallLandvalues = new int[_capacity];
                     holdLandValue = false;
                 }
-                if (_realTimeCountSinceLastStorm > OptionHandler.getSliderSetting("MaxTimeBetweenStorms")) //repalce with Modsetting Variable
+                if (_realTimeCountSinceLastStorm > OptionHandler.getSliderSetting("MaxTimeBetweenStorms")) 
                 {
                     _weatherManager.m_targetRain = Mathf.Clamp((float)random.NextDouble(),0.2f,1.0f);
                 }
@@ -419,21 +343,6 @@ namespace Rainfall
         
         public override void OnAfterSimulationTick()
         {
-            /*
-            if (isRaining)
-            {
-                //Debug.Log("[RF]Hydrology.onAfterSimulationTick Current Rainfall = " + _weatherManager.m_currentRain.ToString());
-
-               /
-                if (stormTime >= (decimal)stormDuration)
-                {
-                    Debug.Log("[RF]Hydrology.OnAfterTick Storm completed naturally.");
-                    _weatherManager.m_targetRain = 0;
-                }
-                    
-
-                
-            }*/
             base.OnAfterSimulationTick();
         }
 
@@ -542,8 +451,6 @@ namespace Rainfall
         {
             introductionStatements = new List<string>();
             beforeTimeStatements = new List<string>();
-            afterIntensityAdjectiveStatements = new List<string>();
-            depthAdjectives = new SortedList<float, string>();
             beforeIntensityAdjectiveStatements = new List<string>();
             intensityAdjectives = new SortedList<float, string>();
             beforeReturnRateStatements = new List<string>();
