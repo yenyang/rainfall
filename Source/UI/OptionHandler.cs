@@ -37,6 +37,8 @@ namespace Rainfall
                     new OptionsSlider()   {defaultValue = 3600f, uniqueName = "MaxTimeBetweenStorms",            readableName = "Max. time btw. storms",     units = " min",     tooltipFormat = "F0",     max = 3600f,  step = 60f, tooltipMultiplier = 1f/60f},
                     new OptionsCheckbox() {defaultValue = true,  uniqueName = "SimulatePollution",               readableName = "Simulate Pollution"},
                     new OptionsCheckbox() {defaultValue = true, uniqueName="PreventDeletingDams",                readableName = "Prevent Deleting Dam Water Sources"},
+                    new OptionsCheckbox() {defaultValue = true, uniqueName="SullyWDP",                           readableName = "Convert Sully's Water Drain Pipe to SD Outlet"},
+                    new OptionsButton() {uniqueName = "ResetWeather",                                            readableName = "Reset Weather",                onButtonClicked= Hydrology.ResetWeather},
                     new OptionsButton() {uniqueName = "RestartAllAssets",                                        readableName = "Un-Halt All RF Assets",        onButtonClicked= Hydraulics.RestartAllRFAssets},
                     new OptionsButton() {uniqueName = "Reinstate",                                               readableName = "Un-Terminate RF",              onButtonClicked = Hydrology.Reinstate},
                 }

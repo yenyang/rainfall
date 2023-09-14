@@ -727,5 +727,15 @@ namespace Rainfall
         {
             Hydrology.instance.terminated = false;
         }
+        public static void ResetWeather()
+        {
+            Hydrology.instance.isRaining = false;
+            WeatherManager.instance.m_targetCloud = 0f;
+            WeatherManager.instance.m_currentCloud = 0f;
+            WeatherManager.instance.m_currentFog = 0f;
+            WeatherManager.instance.m_targetFog = 0f;
+            WeatherManager.instance.m_currentRain = 0f;
+            WeatherManager.instance.m_targetRain = 0f;
+        }
     }
 }
