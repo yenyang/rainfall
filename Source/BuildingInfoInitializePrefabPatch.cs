@@ -22,7 +22,7 @@ namespace Rainfall
                 //Debug.Log("[PLS]BuildingInfoInitializePrefabPatch " + __instance.name +" is DummyBuildingAI");
                 
                 Debug.Log("[RF]BuildingInfoInitializePrefabPatch __instance.name = " + __instance.name);
-                bool flag = (__instance.name == "2818575811.Water Drain Pipe_Data");
+                bool flag = (__instance.name == "2818575811.Water Drain Pipe_Data" && OptionHandler.getCheckboxSetting("SullyWDP"));
                 //Debug.Log("[PLS]BuildingInfoInitializePrefabPatch ModSettings.PSACustomProperties.ContainsKey is " + flag);
 
                 if (flag)
