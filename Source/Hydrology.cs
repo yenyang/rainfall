@@ -279,7 +279,7 @@ namespace Rainfall
             }
             else if (_weatherManager.m_currentRain > 0 && isRaining == true && simulationTimeDelta > 0 && realTimeDelta > 0 /*&& stormTime < (decimal)stormDuration*/)
             {
-                if (_weatherManager.m_currentRain < _weatherManager.m_targetRain)
+                if (_weatherManager.m_currentRain < _weatherManager.m_targetRain && _weatherManager.m_currentRain > 0.001f)
                 {
                     _weatherManager.m_currentRain = Mathf.Clamp(Mathf.Min(_weatherManager.m_targetRain, _weatherManager.m_currentRain - 0.0002f + OptionHandler.getSliderSetting("IntensityRateOfChange")),0f, 1f);
                 }

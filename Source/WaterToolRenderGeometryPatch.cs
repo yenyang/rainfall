@@ -101,7 +101,12 @@ namespace Rainfall
 			{
 				if (waterSources.m_buffer[i].m_type >= 2)
 				{
-					WaterSource currentWaterSource = waterSources.m_buffer[i];
+                    WaterSourceEntry.WaterSourceType currentWaterSourceType = WaterSourceManager.GetWaterSourceEntry(i + 1).GetWaterSourceType();
+					if (currentWaterSourceType == WaterSourceEntry.WaterSourceType.DamPowerHouseFacility && OptionHandler.getCheckboxSetting("PreventDeletingDams"))
+					{
+						continue;
+					}
+                    WaterSource currentWaterSource = waterSources.m_buffer[i];
 					Vector2 waterSourcePositionXZ = new Vector2(currentWaterSource.m_outputPosition.x, currentWaterSource.m_outputPosition.z);
 					Vector2 mousePositionXZ = new Vector2(___m_mousePosition.x, ___m_mousePosition.z);
                     float num = Mathf.Sqrt(Mathf.Abs(currentWaterSource.m_outputRate)) * 0.4f + 10f;

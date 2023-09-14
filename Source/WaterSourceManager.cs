@@ -16,7 +16,6 @@ namespace Rainfall
 
         public static readonly Dictionary<WaterSourceEntry.WaterSourceType, Color> WaterSourceColors = new Dictionary<WaterSourceEntry.WaterSourceType, Color>()
         {
-            {WaterSourceEntry.WaterSourceType.DamPowerHouseFacility, new Color(1f, 1f, 0f, 1f)},
             {WaterSourceEntry.WaterSourceType.SewerFacility, new Color(0f, 0.8f, 0.4f, 1f) },
             {WaterSourceEntry.WaterSourceType.StormDrainInletFacility, new Color(0.4f, 0f, 0.4f, 1f)},
             {WaterSourceEntry.WaterSourceType.StormDrainOutletFacility, new Color(1.0f, 0.0f, 0.0f, 1f) },
@@ -24,7 +23,8 @@ namespace Rainfall
             {WaterSourceEntry.WaterSourceType.WaterFacility, new Color(0f, 0f, 0.6f, 1f) },
             {WaterSourceEntry.WaterSourceType.WaterTruck, new Color(1f, 0.5f, 0f, 1f) },
             {WaterSourceEntry.WaterSourceType.FloodSpawner, new Color(0f, 1f, 0f, 1f) },
-            {WaterSourceEntry.WaterSourceType.RetentionBasin, new Color(0.8f, 0.4f, 0f, 1f) },
+            {WaterSourceEntry.WaterSourceType.RetentionBasin, new Color(1f, 1f, 0f, 1f) },
+            {WaterSourceEntry.WaterSourceType.DamPowerHouseFacility, new Color(0.8f, 0.4f, 0f, 1f)},
         };
 
         private static int m_entryCount = 0;
