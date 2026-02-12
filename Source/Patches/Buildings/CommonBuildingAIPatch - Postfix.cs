@@ -10,6 +10,8 @@ using ICities;
 namespace Rainfall
 {
     [HarmonyPatch(typeof(CommonBuildingAI), "HandleCommonConsumption")]
+    [HarmonyPatch(new Type[]{typeof(ushort), typeof(Building), typeof(Building.Frame), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(DistrictPolicies.Services)}, 
+          new ArgumentType[]{ArgumentType.Normal, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Ref, ArgumentType.Normal, ArgumentType.Normal})]
     class CommonBuildingAIPatch
     {
         static void Postfix(CommonBuildingAI __instance, ref int __result, ushort buildingID, ref Building data, ref Building.Frame frameData, ref int electricityConsumption, ref int heatingConsumption, ref int waterConsumption, ref int sewageAccumulation, ref int garbageAccumulation, ref int mailAccumulation, int maxMail, DistrictPolicies.Services policies)
