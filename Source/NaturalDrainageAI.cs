@@ -547,7 +547,7 @@ namespace Rainfall
             return base.CheckUnlocking();
         }
 
-        public override bool AllowOverlap(BuildingInfo other)
+        public override bool IgnoreBuildingCollision()
         {
             return this.m_allowOverlap;
         }
